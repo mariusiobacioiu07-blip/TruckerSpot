@@ -1144,7 +1144,7 @@
     const coords = RUTAS_COORDS[rutaKey];
     if (!coords) return [];
 
-    const fields = encodeURIComponent('{incidents{type,properties{iconCategory,magnitudeOfDelay,from,to,length,delay,roadNumbers,events{description,code,iconCategory}}}}');
+    const fields = encodeURIComponent('{incidents{type,properties{iconCategory,magnitudeOfDelay,from,to,length,delay,roadNumbers,startTime,endTime,events{description,code,iconCategory}}}}');
 
     // Llamar a cada segmento estrecho en paralelo
     const peticiones = coords.bboxes.map(bbox => {
@@ -1167,9 +1167,30 @@
       return true;
     });
 
+    // Filtrar incidencias antiguas (endTime pasado, o startTime hace más de 6h)
+    const ahora = Date.now();
+    const MAX_ANTIGUEDAD_MS = 6 * 60 * 60 * 1000; // 6 horas
+    const recientes = unicas.filter(inc => {
+      const p = inc.properties || {};
+      // Si tiene endTime y ya pasó → descartar
+      if (p.endTime) {
+        const end = new Date(p.endTime).getTime();
+        if (!isNaN(end) && end < ahora) return false;
+      }
+      // Si tiene startTime y es de hace más de 6h sin endTime → descartar
+      if (p.startTime && !p.endTime) {
+        const start = new Date(p.startTime).getTime();
+        if (!isNaN(start) && (ahora - start) > MAX_ANTIGUEDAD_MS) return false;
+      }
+      return true;
+    });
+
+    // Usar recientes si quedan, si no usar todas (puede que TomTom no devuelva timestamps)
+    const conFiltroTemporal = recientes.length > 0 ? recientes : unicas;
+
     // Filtrar solo las que mencionan la carretera de la ruta
     const carreteras = coords.carreteras.split(',').map(c => c.trim().toUpperCase());
-    const filtradas = unicas.filter(inc => {
+    const filtradas = conFiltroTemporal.filter(inc => {
       const roads = (inc.properties?.roadNumbers || []).map(r => r.toUpperCase());
       const from = (inc.properties?.from || '').toUpperCase();
       const to = (inc.properties?.to || '').toUpperCase();
@@ -1181,7 +1202,11 @@
     });
 
     // Si el filtro es demasiado estricto y no queda nada, devolver todas
-    return filtradas.length > 0 ? filtradas : unicas;
+    const resultado = filtradas.length > 0 ? filtradas : conFiltroTemporal;
+    // Añadir metadata de filtrado para mostrar en footer
+    resultado._totalBruto = todasIncidencias.length;
+    resultado._filtradas = resultado.length;
+    return resultado;
   }
 
   // ══════════════════════════════════════════
@@ -1313,6 +1338,7 @@ Responde SOLO con este JSON exacto (sin markdown, sin texto extra):
       texto = texto.replace(/```json|```/g, '').trim();
       const info = JSON.parse(texto);
       info._tomtom_incidents = incidents.length;
+      info._tomtom_total_bruto = incidents._totalBruto || incidents.length;
       renderResultado(info, ruta);
 
     } catch (e) {
@@ -1464,7 +1490,7 @@ Responde SOLO con este JSON exacto (sin markdown, sin texto extra):
         <div style="font-size:12px;color:var(--text-dim);line-height:1.5">${info.consejo_camionero}</div>
       </div>` : ''}
       <div class="updated-tag">📡 TomTom Traffic API · 🤖 Llama 3.3 · ${now}</div>
-      ${info._tomtom_incidents !== undefined ? `<div class="updated-tag" style="margin-top:-6px;color:var(--green)">✅ ${info._tomtom_incidents} incidencia${info._tomtom_incidents !== 1 ? 's' : ''} real${info._tomtom_incidents !== 1 ? 'es' : ''} procesada${info._tomtom_incidents !== 1 ? 's' : ''}</div>` : ''}
+      ${info._tomtom_incidents !== undefined ? `<div class="updated-tag" style="margin-top:-6px;color:var(--green)">✅ ${info._tomtom_incidents} incidencia${info._tomtom_incidents !== 1 ? 's' : ''} activa${info._tomtom_incidents !== 1 ? 's' : ''} en ruta${info._tomtom_total_bruto > info._tomtom_incidents ? ` (${info._tomtom_total_bruto - info._tomtom_incidents} antiguas descartadas)` : ''}</div>` : ''}
     `;
   }
 </script>
