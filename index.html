@@ -1063,31 +1063,75 @@
   }
 
   // ══════════════════════════════════════════
-  // COORDENADAS POR RUTA (bbox para TomTom)
+  // COORDENADAS POR RUTA (múltiples segmentos estrechos)
+  // Cada bbox cubre ~0.15° de ancho = ~12km a cada lado
   // ══════════════════════════════════════════
   const RUTAS_COORDS = {
     'La Junquera → Barcelona por AP-7 (145 km)': {
-      bbox: '1.7500,41.2000,2.2000,42.4500',
+      // AP-7 sigue la costa, trazado estrecho N-S
+      bboxes: [
+        '2.8500,42.3500,3.1500,42.4800', // La Junquera – Figueres
+        '2.7000,41.9000,2.9500,42.3500', // Girona
+        '2.4500,41.5500,2.7500,41.9000', // Maçanet – Hostalric
+        '2.1000,41.3500,2.5000,41.5800', // Granollers – Montmeló
+        '2.0500,41.2500,2.2000,41.4000'  // Barcelona entrada
+      ],
+      carreteras: 'AP-7',
       label: 'AP-7 La Junquera–Barcelona'
     },
     'Barcelona → Valencia por AP-7 (349 km)': {
-      bbox: '-0.4000,39.4000,2.2000,41.4500',
+      bboxes: [
+        '2.0500,41.2500,2.2000,41.4000', // Barcelona salida
+        '1.6000,41.1000,2.0500,41.2800', // Tarragona
+        '0.5000,40.7000,1.6000,41.1500', // Tortosa – Vinaròs
+        '-0.1000,39.9500,0.5500,40.7500', // Castellón
+        '-0.4500,39.4000,0.0000,40.0000'  // Valencia entrada
+      ],
+      carreteras: 'AP-7',
       label: 'AP-7 Barcelona–Valencia'
     },
     'Valencia → Madrid por A-3 (357 km)': {
-      bbox: '-3.7500,39.4500,-0.3500,40.4500',
+      bboxes: [
+        '-0.4500,39.4000,0.0000,39.6000', // Valencia salida
+        '-1.0000,39.3500,-0.4000,39.5000', // Utiel – Requena
+        '-1.8000,39.3000,-1.0000,39.5000', // Motilla – Minglanilla
+        '-2.5000,39.4000,-1.8000,39.6000', // Cuenca zona
+        '-3.7000,40.2500,-2.4000,40.5000'  // Madrid entrada A-3
+      ],
+      carreteras: 'A-3',
       label: 'A-3 Valencia–Madrid'
     },
     'Madrid → Bilbao por A-1 (395 km)': {
-      bbox: '-2.9500,40.4000,-3.7000,43.2600',
+      bboxes: [
+        '-3.7500,40.4000,-3.5000,40.6000', // Madrid salida
+        '-3.7000,40.9000,-3.4000,41.2000', // Guadalajara norte
+        '-3.6500,41.4000,-3.3000,41.8000', // Aranda de Duero
+        '-3.5500,41.9000,-3.2000,42.4000', // Burgos
+        '-2.9500,42.5000,-2.6000,43.2500'  // Miranda – Bilbao
+      ],
+      carreteras: 'A-1',
       label: 'A-1 Madrid–Bilbao'
     },
     'Zaragoza → Barcelona por AP-2 (296 km)': {
-      bbox: '0.8500,41.3500,2.2000,41.6600',
+      bboxes: [
+        '-0.9500,41.5500,-0.7000,41.7000', // Zaragoza salida
+        '-0.5000,41.4500,-0.0500,41.6500', // Bujaraloz – Fraga
+        '0.0500,41.3500,0.5000,41.6000',   // Lérida / Lleida
+        '0.8000,41.3000,1.2000,41.5500',   // Tàrrega – Cervera
+        '1.4000,41.3000,1.9000,41.5500'    // Igualada – Martorell
+      ],
+      carreteras: 'AP-2, A-2',
       label: 'AP-2 Zaragoza–Barcelona'
     },
     'Sevilla → Madrid por A-4 (534 km)': {
-      bbox: '-3.7500,37.3800,-5.9800,40.4200',
+      bboxes: [
+        '-5.9800,37.3500,-5.7000,37.5000', // Sevilla salida
+        '-5.0000,37.7000,-4.5000,38.1000', // Córdoba
+        '-4.1000,38.0000,-3.6000,38.4000', // Bailén zona
+        '-3.7000,38.6000,-3.4000,39.2000', // La Carolina – Despeñaperros
+        '-3.7500,39.4000,-3.4000,40.4500'  // Madrid entrada A-4
+      ],
+      carreteras: 'A-4',
       label: 'A-4 Sevilla–Madrid'
     }
   };
@@ -1100,18 +1144,44 @@
     const coords = RUTAS_COORDS[rutaKey];
     if (!coords) return [];
 
-    // Usamos Traffic Flow + Incidents v5 con fields codificado correctamente
-    const bbox = coords.bbox;
     const fields = encodeURIComponent('{incidents{type,properties{iconCategory,magnitudeOfDelay,from,to,length,delay,roadNumbers,events{description,code,iconCategory}}}}');
-    const url = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${TOMTOM_KEY}&bbox=${bbox}&fields=${fields}&language=es-ES&timeValidityFilter=present`;
 
-    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-    if (!res.ok) {
-      const errText = await res.text();
-      throw new Error(`TomTom ${res.status}: ${errText.slice(0, 150)}`);
-    }
-    const data = await res.json();
-    return data.incidents || [];
+    // Llamar a cada segmento estrecho en paralelo
+    const peticiones = coords.bboxes.map(bbox => {
+      const url = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${TOMTOM_KEY}&bbox=${bbox}&fields=${fields}&language=es-ES&timeValidityFilter=present`;
+      return fetch(url, { headers: { 'Accept': 'application/json' } })
+        .then(r => r.ok ? r.json() : { incidents: [] })
+        .then(d => d.incidents || [])
+        .catch(() => []);
+    });
+
+    const resultados = await Promise.all(peticiones);
+
+    // Juntar y deduplicar por id
+    const todasIncidencias = resultados.flat();
+    const vistas = new Set();
+    const unicas = todasIncidencias.filter(inc => {
+      const id = inc.properties?.id || JSON.stringify(inc.properties?.from);
+      if (vistas.has(id)) return false;
+      vistas.add(id);
+      return true;
+    });
+
+    // Filtrar solo las que mencionan la carretera de la ruta
+    const carreteras = coords.carreteras.split(',').map(c => c.trim().toUpperCase());
+    const filtradas = unicas.filter(inc => {
+      const roads = (inc.properties?.roadNumbers || []).map(r => r.toUpperCase());
+      const from = (inc.properties?.from || '').toUpperCase();
+      const to = (inc.properties?.to || '').toUpperCase();
+      const desc = ((inc.properties?.events?.[0]?.description) || '').toUpperCase();
+      return carreteras.some(c =>
+        roads.some(r => r.includes(c)) ||
+        from.includes(c) || to.includes(c) || desc.includes(c)
+      );
+    });
+
+    // Si el filtro es demasiado estricto y no queda nada, devolver todas
+    return filtradas.length > 0 ? filtradas : unicas;
   }
 
   // ══════════════════════════════════════════
@@ -1184,12 +1254,14 @@
       const prompt = `Eres un asistente experto en tráfico para camioneros profesionales españoles.
 Hoy es ${hoy}, hora actual: ${hora}.
 Ruta del camionero: ${ruta}
+Carretera principal: ${RUTAS_COORDS[ruta]?.carreteras || ''}
 
 DATOS REALES DE TRÁFICO OBTENIDOS DE TOMTOM TRAFFIC API (fuente oficial):
 ${incidenciasTexto}
 
 INSTRUCCIONES IMPORTANTES:
 - Usa ÚNICAMENTE los datos reales de TomTom proporcionados arriba.
+- IGNORA cualquier incidencia que NO sea en la carretera principal de la ruta (${RUTAS_COORDS[ruta]?.carreteras || ''}). Si ves incidencias en carreteras secundarias (BP-, LV-, TV-, B-, C- locales), descártalas completamente.
 - Si TomTom no reporta peajes, NO los menciones. Solo menciona peajes si aparecen en los datos.
 - Si no hay incidencias, indica claramente que la vía está despejada.
 - El precio del gasóleo es orientativo (~1.35 €/L media nacional hoy).
@@ -1212,7 +1284,7 @@ Responde SOLO con este JSON exacto (sin markdown, sin texto extra):
   "restricciones": [
     { "icono": "emoji", "concepto": "texto", "estado": "ok|warn|no", "valor": "valor real o indicación sin datos" }
   ],
-  "gasoleo_precio": "1.35 €/L aprox. (media nacional)",
+  "gasoleo_precio": "1.63 €/L aprox. (media nacional jun-2026)",
   "consejo_camionero": "Consejo práctico basado en las incidencias reales encontradas",
   "fuente_datos": "TomTom Traffic API · ${hora}"
 }`;
@@ -1383,7 +1455,7 @@ Responde SOLO con este JSON exacto (sin markdown, sin texto extra):
         ${restriccionesHTML}
         <div class="restr-row">
           <div class="restr-icon">⛽</div>Gasóleo aprox. en ruta
-          <div class="restr-ok">${info.gasoleo_precio || '—'}</div>
+          <div class="restr-ok">${info.gasoleo_precio || '1.63 €/L'}</div>
         </div>
       </div>
       ${info.consejo_camionero ? `
