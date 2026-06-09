@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>TruckerSpot</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161c27;
+    --card: #1c2333;
+    --card2: #222b3a;
+    --border: #2a3548;
+    --green: #00e676;
+    --green-dim: #00e67618;
+    --red: #ff4d4d;
+    --red-dim: #ff4d4d18;
+    --yellow: #ffd740;
+    --yellow-dim: #ffd74018;
+    --orange: #ff8c00;
+    --orange-dim: #ff8c0018;
+    --purple: #a855f7;
+    --purple-dim: #a855f718;
+    --blue: #38bdf8;
+    --blue-dim: #38bdf818;
+    --text: #e8edf5;
+    --text-dim: #8896a8;
+    --text-muted: #4a5568;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    max-width: 430px;
+    margin: 0 auto;
+    padding-bottom: 80px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 10px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--green); }
+  .header-loc {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--text-dim);
+    background: var(--card); border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 20px;
+  }
+  .dot-pulse { width: 7px; height: 7px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .search-bar {
+    display: flex; align-items: center;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 9px 12px; gap: 8px;
+    font-size: 14px; color: var(--text-dim);
+  }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: var(--surface); border-top: 1px solid var(--border);
+    display: flex; padding: 8px 0 12px;
+    z-index: 100;
+  }
+  .nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 3px; cursor: pointer; padding: 4px 0;
+  }
+  .nav-icon { font-size: 22px; }
+  .nav-label { font-size: 10px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; }
+  .nav-item.active .nav-label { color: var(--green); }
+  .nav-item.active .nav-icon { filter: drop-shadow(0 0 6px var(--green)); }
+
+  /* VISTAS */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ═══════════════ VISTA RUTA ═══════════════ */
+  .ruta-header {
+    margin: 12px 16px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+  }
+  .ruta-title { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.7px; font-weight: 700; }
+  .ruta-route { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+  .ruta-route span { color: var(--green); }
+  .ruta-meta { display: flex; gap: 8px; margin-top: 8px; }
+  .ruta-pill {
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 4px 10px; font-size: 11px; color: var(--text-dim);
+  }
+
+  .traffic-section { padding: 12px 16px 4px; }
+  .traffic-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); margin-bottom: 10px; }
+
+  .traffic-card {
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 8px;
+    border: 1px solid; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .tc-green { background: var(--green-dim); border-color: var(--green); }
+  .tc-yellow { background: var(--yellow-dim); border-color: var(--yellow); }
+  .tc-red { background: var(--red-dim); border-color: var(--red); }
+  .tc-blue { background: var(--blue-dim); border-color: var(--blue); }
+  .tc-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
+  .tc-body { flex: 1; }
+  .tc-title { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .tc-green .tc-title { color: var(--green); }
+  .tc-yellow .tc-title { color: var(--yellow); }
+  .tc-red .tc-title { color: var(--red); }
+  .tc-blue .tc-title { color: var(--blue); }
+  .tc-desc { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+  .tc-km { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+  .restricciones-card {
+    margin: 0 16px 10px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px;
+  }
+  .restr-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); margin-bottom: 10px; }
+  .restr-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-dim);
+  }
+  .restr-row:last-child { border-bottom: none; }
+  .restr-icon { font-size: 15px; width: 22px; text-align: center; }
+  .restr-ok { color: var(--green); font-weight: 600; margin-left: auto; }
+  .restr-warn { color: var(--yellow); font-weight: 600; margin-left: auto; }
+  .restr-no { color: var(--red); font-weight: 600; margin-left: auto; }
+
+  .updated-tag {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 11px; color: var(--text-muted); padding: 8px 16px 4px;
+  }
+
+  /* ═══════════════ RUTA SELECTOR ═══════════════ */
+  .ruta-selector {
+    margin: 12px 16px 0;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px;
+  }
+  .ruta-selector label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); display: block; margin-bottom: 8px; }
+  .ruta-select {
+    width: 100%; background: var(--card2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; font-size: 14px; color: var(--text);
+    outline: none; cursor: pointer; appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='%238896a8'%3E%3Cpath d='M0 0l6 8 6-8z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 12px center;
+  }
+  .ruta-select:focus { border-color: var(--green); }
+  .ruta-select option { background: var(--card2); }
+  .btn-consultar {
+    width: 100%; margin-top: 10px;
+    background: var(--green); color: #000; border: none;
+    border-radius: 11px; padding: 13px; font-size: 15px; font-weight: 800; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-consultar:disabled { background: var(--card2); color: var(--text-muted); cursor: not-allowed; }
+
+  .trafico-resultado { padding: 10px 16px 0; }
+  .groq-loading {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 24px; color: var(--text-dim); font-size: 13px;
+  }
+  .spinner {
+    width: 20px; height: 20px; border: 2px solid var(--border);
+    border-top-color: var(--green); border-radius: 50%;
+    animation: spin 0.8s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ═══════════════ FREE TEASER ═══════════════ */
+  .teaser-wrap {
+    position: relative;
+  }
+  .teaser-blur {
+    filter: blur(4px);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.6;
+  }
+  .paywall-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    padding: 20px;
+  }
+  .paywall-card {
+    background: var(--surface);
+    border: 1px solid var(--purple);
+    border-radius: 18px;
+    padding: 22px 18px;
+    text-align: center;
+    max-width: 320px;
+    box-shadow: 0 0 40px rgba(168,85,247,0.15);
+  }
+  .paywall-icon { font-size: 38px; margin-bottom: 10px; }
+  .paywall-title { font-size: 17px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+  .paywall-sub { font-size: 13px; color: var(--text-dim); line-height: 1.5; margin-bottom: 16px; }
+  .paywall-features {
+    list-style: none; text-align: left;
+    background: var(--card2); border-radius: 10px;
+    padding: 10px 14px; margin-bottom: 16px;
+  }
+  .paywall-features li {
+    font-size: 12px; color: var(--text-dim);
+    padding: 5px 0; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .paywall-features li:last-child { border-bottom: none; }
+  .paywall-price {
+    font-size: 26px; font-weight: 900; color: var(--purple);
+    margin-bottom: 4px; letter-spacing: -1px;
+  }
+  .paywall-price span { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+  .btn-pro {
+    width: 100%; background: var(--purple); color: #fff; border: none;
+    border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 800;
+    cursor: pointer; margin-bottom: 10px;
+  }
+  .btn-pro:active { opacity: 0.85; }
+  .paywall-note { font-size: 11px; color: var(--text-muted); }
+
+  /* PRO badge en header */
+  .pro-badge {
+    display: none;
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    color: #fff; font-size: 10px; font-weight: 800;
+    padding: 3px 8px; border-radius: 6px; letter-spacing: 0.5px;
+  }
+  .pro-badge.visible { display: inline-block; }
+
+  /* Demo toggle (admin) */
+  .demo-toggle {
+    margin: 10px 16px 0;
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12px; color: var(--text-muted);
+  }
+  .toggle-switch {
+    width: 38px; height: 20px; background: var(--border); border-radius: 10px;
+    cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0;
+  }
+  .toggle-switch.on { background: var(--purple); }
+  .toggle-knob {
+    width: 16px; height: 16px; background: #fff; border-radius: 50%;
+    position: absolute; top: 2px; left: 2px; transition: left 0.2s;
+  }
+  .toggle-switch.on .toggle-knob { left: 20px; }
+
+  /* ═══════════════ VISTA MAPA ═══════════════ */
+  .map-view-area {
+    margin: 12px 16px 0;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; height: 320px; position: relative;
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+  }
+  .map-bg {
+    position: absolute; inset: 0;
+    background: linear-gradient(rgba(0,230,118,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,230,118,0.03) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .map-route-line {
+    position: absolute; top: 50%; left: 8%; width: 84%; height: 3px;
+    background: linear-gradient(90deg, var(--green), #00e67655);
+    border-radius: 2px; transform: translateY(-50%);
+  }
+  .mpin {
+    position: absolute; width: 22px; height: 22px;
+    border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+    border: 2px solid; display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .mpin-inner { width: 9px; height: 9px; border-radius: 50%; transform: rotate(45deg); }
+  .mg { background: var(--green-dim); border-color: var(--green); }
+  .mg .mpin-inner { background: var(--green); }
+  .my { background: var(--yellow-dim); border-color: var(--yellow); }
+  .my .mpin-inner { background: var(--yellow); }
+  .mp1{top:35%;left:8%} .mp2{top:45%;left:25%} .mp3{top:30%;left:42%}
+  .mp4{top:50%;left:60%} .mp5{top:38%;left:78%}
+  .map-coming {
+    z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    color: var(--text-muted); font-size: 13px;
+  }
+  .map-badge-tl {
+    position: absolute; top: 10px; left: 10px;
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 10px; font-size: 11px; color: var(--text-dim); z-index: 3;
+  }
+  .map-filter-row {
+    display: flex; gap: 8px; padding: 10px 16px; overflow-x: auto; scrollbar-width: none;
+  }
+  .map-filter-row::-webkit-scrollbar { display: none; }
+  .mf-btn {
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 20px; padding: 6px 14px;
+    font-size: 12px; white-space: nowrap; cursor: pointer; flex-shrink: 0;
+  }
+  .mf-btn.active { background: var(--green-dim); border-color: var(--green); color: var(--green); font-weight: 600; }
+
+  .map-legend {
+    margin: 0 16px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 14px;
+    display: flex; gap: 16px; justify-content: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* ═══════════════ VISTA PARKING ═══════════════ */
+  .parking-search {
+    margin: 12px 16px 0;
+    display: flex; align-items: center;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 14px; gap: 8px;
+    font-size: 14px; color: var(--text-dim);
+  }
+  .filters { padding: 10px 16px; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; }
+  .filter-btn {
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 20px; padding: 6px 14px;
+    font-size: 13px; white-space: nowrap; cursor: pointer; flex-shrink: 0;
+  }
+  .filter-btn.active { background: var(--green-dim); border-color: var(--green); color: var(--green); font-weight: 600; }
+
+  .section { padding: 4px 16px; }
+  .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-dim); }
+  .section-count { font-size: 12px; color: var(--text-muted); }
+
+  .stop-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.15s;
+  }
+  .stop-card:active { border-color: var(--green); }
+  .stop-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .stop-name { font-size: 15px; font-weight: 700; color: var(--text); }
+  .stop-km {
+    font-size: 11px; color: var(--text-dim);
+    background: var(--card2); padding: 3px 8px; border-radius: 10px; flex-shrink: 0;
+  }
+  .stop-road { font-size: 12px; color: var(--text-muted); margin-bottom: 9px; }
+  .badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
+  .badge {
+    display: flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 7px; font-size: 11px; font-weight: 600; border: 1px solid;
+  }
+  .bg { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .br { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+  .by { background: var(--yellow-dim); border-color: var(--yellow); color: var(--yellow); }
+  .bo { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+  .bb { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  .bgray { background: #2a354820; border-color: var(--border); color: var(--text-dim); }
+
+  .sec-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 10px; border-radius: 9px; font-size: 12px; font-weight: 600; margin-bottom: 8px;
+  }
+  .sec-safe { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+  .sec-warn { background: var(--yellow-dim); color: var(--yellow); border: 1px solid var(--yellow); }
+  .sec-danger { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+
+  .stop-stats { display: flex; gap: 6px; margin-top: 8px; }
+  .stop-stat { flex: 1; background: var(--card2); border-radius: 8px; padding: 7px; text-align: center; }
+  .stat-val { font-size: 13px; font-weight: 700; color: var(--green); }
+  .stat-lbl { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+  .stop-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; }
+  .rating { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--yellow); font-weight: 700; }
+  .rating-cnt { color: var(--text-muted); font-weight: 400; }
+
+  .km-sep {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 0 8px; color: var(--text-muted); font-size: 11px;
+  }
+  .km-sep::before, .km-sep::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* ═══════════════ VISTA PERFIL ═══════════════ */
+  .perfil-header {
+    margin: 12px 16px 0;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 16px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .perfil-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--green-dim); border: 2px solid var(--green);
+    display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;
+  }
+  .perfil-name { font-size: 16px; font-weight: 800; }
+  .perfil-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .perfil-badge { margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; background: var(--green-dim); border: 1px solid var(--green); color: var(--green); font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; }
+
+  .perfil-section { margin: 12px 16px 0; }
+  .perfil-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); margin-bottom: 8px; }
+  .perfil-item {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+  }
+  .perfil-item-icon { font-size: 18px; width: 28px; text-align: center; }
+  .perfil-item-text { flex: 1; font-size: 13px; font-weight: 600; }
+  .perfil-item-arrow { color: var(--text-muted); font-size: 14px; }
+  .perfil-item-badge { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
+
+  /* PREMIUM */
+  .premium-banner {
+    margin: 12px 16px 0;
+    background: linear-gradient(135deg, #1c1a2e, #241c35);
+    border: 1px solid var(--purple); border-radius: 14px;
+    padding: 13px; display: flex; align-items: center; gap: 12px;
+  }
+  .premium-icon { font-size: 26px; }
+  .premium-text { flex: 1; }
+  .premium-text strong { font-size: 13px; color: var(--purple); }
+  .premium-text p { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .premium-btn {
+    background: var(--purple); color: #fff; border: none;
+    border-radius: 9px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 200; backdrop-filter: blur(3px);
+  }
+  .modal-overlay.open { display: flex; align-items: flex-end; }
+  .modal {
+    background: var(--surface); border-radius: 20px 20px 0 0;
+    padding: 16px; width: 100%; max-width: 430px; margin: 0 auto;
+    max-height: 88vh; overflow-y: auto; border-top: 1px solid var(--border);
+  }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 14px; }
+  .modal-title { font-size: 19px; font-weight: 800; margin-bottom: 2px; }
+  .modal-sub { font-size: 12px; color: var(--text-muted); margin-bottom: 14px; }
+  .modal-slabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); margin: 14px 0 7px; }
+  .detail-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-icon { font-size: 16px; width: 24px; text-align: center; }
+  .detail-val { margin-left: auto; font-weight: 600; }
+  .ok { color: var(--green); }
+  .no { color: var(--red); }
+  .warn { color: var(--yellow); }
+  .comment {
+    background: var(--card2); border-radius: 10px; padding: 10px 12px;
+    margin-bottom: 8px; font-size: 12px; color: var(--text-dim); line-height: 1.5;
+  }
+  .btn-nav-link {
+    display: block; width: 100%;
+    background: var(--green); color: #000; border: none;
+    border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 800;
+    margin-top: 8px; cursor: pointer; text-align: center; text-decoration: none;
+  }
+  .btn-report {
+    width: 100%; background: var(--card); border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 12px; padding: 12px;
+    font-size: 13px; font-weight: 600; margin-top: 8px; cursor: pointer;
+  }
+
+  /* PAYWALL MODAL */
+  .paywall-modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85); z-index: 300; backdrop-filter: blur(6px);
+    align-items: flex-end; justify-content: center;
+  }
+  .paywall-modal-overlay.open { display: flex; }
+  .paywall-modal {
+    background: var(--surface); border-radius: 24px 24px 0 0;
+    padding: 24px 20px 32px; width: 100%; max-width: 430px;
+    border-top: 1px solid var(--purple);
+    box-shadow: 0 -20px 60px rgba(168,85,247,0.2);
+  }
+  .pm-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
+  .pm-icon { font-size: 44px; text-align: center; margin-bottom: 12px; }
+  .pm-title { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 6px; }
+  .pm-sub { font-size: 13px; color: var(--text-dim); text-align: center; line-height: 1.5; margin-bottom: 20px; }
+  .pm-features { list-style: none; margin-bottom: 22px; }
+  .pm-features li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; border-bottom: 1px solid var(--border);
+    font-size: 13px; color: var(--text-dim);
+  }
+  .pm-features li:last-child { border-bottom: none; }
+  .pm-features li .feat-icon { font-size: 18px; width: 28px; text-align: center; }
+  .pm-features li strong { color: var(--text); }
+  .pm-price-row { text-align: center; margin-bottom: 16px; }
+  .pm-price { font-size: 36px; font-weight: 900; color: var(--purple); letter-spacing: -1.5px; }
+  .pm-price small { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+  .pm-period { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .btn-subscribe {
+    width: 100%; background: var(--purple); color: #fff; border: none;
+    border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 800; cursor: pointer;
+    margin-bottom: 10px; letter-spacing: 0.2px;
+  }
+  .btn-subscribe:active { opacity: 0.85; }
+  .btn-maybe-later {
+    width: 100%; background: transparent; border: none;
+    color: var(--text-muted); font-size: 13px; padding: 8px; cursor: pointer;
+  }
+  .pm-guarantee { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 10px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="logo">Trucker<span>Spot</span> <span class="pro-badge" id="pro-badge-header">PRO</span></div>
+    <div class="header-loc"><div class="dot-pulse"></div>AP-7 · España</div>
+  </div>
+  <div class="search-bar">🔍 &nbsp;Buscar parada, km, provincia...</div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!--              VISTA: RUTA              -->
+<!-- ═══════════════════════════════════════ -->
+<div class="view active" id="view-ruta">
+
+  <!-- SELECTOR DE RUTA -->
+  <div class="ruta-selector">
+    <label>🚛 Selecciona tu ruta</label>
+    <select class="ruta-select" id="ruta-select">
+      <option value="">— Elige una ruta —</option>
+      <option value="La Junquera → Barcelona por AP-7 (145 km)">La Junquera → Barcelona · AP-7</option>
+      <option value="Barcelona → Valencia por AP-7 (349 km)">Barcelona → Valencia · AP-7</option>
+      <option value="Valencia → Madrid por A-3 (357 km)">Valencia → Madrid · A-3</option>
+      <option value="Madrid → Bilbao por A-1 (395 km)">Madrid → Bilbao · A-1</option>
+      <option value="Zaragoza → Barcelona por AP-2 (296 km)">Zaragoza → Barcelona · AP-2</option>
+      <option value="Sevilla → Madrid por A-4 (534 km)">Sevilla → Madrid · A-4</option>
+    </select>
+    <button class="btn-consultar" id="btn-consultar" onclick="consultarRuta()">
+      🚦 Ver estado de la ruta
+    </button>
+  </div>
+
+  <!-- DEMO TOGGLE (solo para desarrollo — quitar en producción) -->
+  <div class="demo-toggle">
+    <span>🔧 Demo: simular cuenta Pro</span>
+    <div class="toggle-switch" id="pro-toggle" onclick="togglePro()">
+      <div class="toggle-knob"></div>
+    </div>
+  </div>
+
+  <!-- RESULTADO IA -->
+  <div class="trafico-resultado" id="trafico-resultado"></div>
+
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!--              VISTA: MAPA              -->
+<!-- ═══════════════════════════════════════ -->
+<div class="view" id="view-mapa">
+  <div class="map-filter-row">
+    <button class="mf-btn active">🗺️ Todo</button>
+    <button class="mf-btn">🅿️ Parking</button>
+    <button class="mf-btn">⛽ Gasolinera</button>
+    <button class="mf-btn">🚿 Ducha</button>
+    <button class="mf-btn">🔒 Seguro</button>
+  </div>
+
+  <div class="map-view-area">
+    <div class="map-bg"></div>
+    <div class="map-route-line"></div>
+    <div class="mpin mg mp1"><div class="mpin-inner"></div></div>
+    <div class="mpin mg mp2"><div class="mpin-inner"></div></div>
+    <div class="mpin my mp3"><div class="mpin-inner"></div></div>
+    <div class="mpin mg mp4"><div class="mpin-inner"></div></div>
+    <div class="mpin mg mp5"><div class="mpin-inner"></div></div>
+    <div class="map-badge-tl">📍 5 paradas en ruta</div>
+    <div class="map-coming">
+      <span style="font-size:28px">🗺️</span>
+      <span style="font-size:13px">Mapa interactivo</span>
+      <span style="font-size:11px;color:var(--text-muted)">Próximamente</span>
+    </div>
+  </div>
+
+  <div class="map-legend" style="margin-top:10px;">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Sin alertas</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div>Precaución</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Alerta activa</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!--            VISTA: PARKING             -->
+<!-- ═══════════════════════════════════════ -->
+<div class="view" id="view-parking">
+
+  <div class="parking-search">🔍 &nbsp;Buscar por carretera, km o ciudad...</div>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter(this,'todos')">🗺️ Todos</button>
+    <button class="filter-btn" onclick="setFilter(this,'ducha')">🚿 Ducha</button>
+    <button class="filter-btn" onclick="setFilter(this,'comida')">🍽️ Comida</button>
+    <button class="filter-btn" onclick="setFilter(this,'gasoil')">⛽ Gasóleo</button>
+    <button class="filter-btn" onclick="setFilter(this,'24h')">🕛 24h</button>
+    <button class="filter-btn" onclick="setFilter(this,'seguro')">🔒 Seguro</button>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">📍 AP-7 · La Junquera → Barcelona</div>
+      <div class="section-count">5 paradas</div>
+    </div>
+
+    <div class="stop-card" data-tags="ducha comida gasoil 24h seguro" onclick="openModal('s1')">
+      <div class="stop-top">
+        <div class="stop-name">Andamur La Junquera</div>
+        <div class="stop-km">AP-7 · KM 7</div>
+      </div>
+      <div class="stop-road">C/ Bassegoda 4 · 17700 La Junquera, Girona</div>
+      <div class="badges">
+        <div class="badge bg">🚿 Ducha</div>
+        <div class="badge bg">🍽️ Restaurante</div>
+        <div class="badge bb">🕛 24h</div>
+        <div class="badge bg">⛽ Gasóleo</div>
+        <div class="badge by">🅿️ Parking pago</div>
+        <div class="badge bg">💪 Gimnasio gratis</div>
+      </div>
+      <div class="sec-bar sec-safe">🔒 Parking seguro · valla 3m + vigilancia 24h + cámaras</div>
+      <div class="stop-stats">
+        <div class="stop-stat"><div class="stat-val" style="color:var(--yellow)">💳 PAGO</div><div class="stat-lbl">parking seguro</div></div>
+        <div class="stop-stat"><div class="stat-val">106</div><div class="stat-lbl">plazas camión</div></div>
+        <div class="stop-stat"><div class="stat-val">6–00h</div><div class="stat-lbl">restaurante</div></div>
+      </div>
+      <div class="stop-bottom">
+        <div class="rating">★★★★☆ 4.3 <span class="rating-cnt">(top valorada AP-7)</span></div>
+        <span style="color:var(--text-muted);font-size:12px;">Ver más →</span>
+      </div>
+    </div>
+
+    <div class="km-sep">▼ 28 km</div>
+
+    <div class="stop-card" data-tags="ducha comida gasoil 24h" onclick="openModal('s2')">
+      <div class="stop-top">
+        <div class="stop-name">Área de Servicio Empordà</div>
+        <div class="stop-km">AP-7 · KM 35</div>
+      </div>
+      <div class="stop-road">17476 Garrigàs, Girona</div>
+      <div class="badges">
+        <div class="badge bg">🚿 Ducha 3€</div>
+        <div class="badge bg">🍽️ Restaurante</div>
+        <div class="badge bb">🕛 24h</div>
+        <div class="badge bg">⛽ Gasóleo</div>
+        <div class="badge bg">🅿️ Parking gratis</div>
+        <div class="badge bg">📶 WiFi gratis</div>
+      </div>
+      <div class="sec-bar sec-safe">🔒 Sin incidencias reportadas recientemente</div>
+      <div class="stop-stats">
+        <div class="stop-stat"><div class="stat-val ok">GRATIS</div><div class="stat-lbl">parking</div></div>
+        <div class="stop-stat"><div class="stat-val">3€</div><div class="stat-lbl">ducha</div></div>
+        <div class="stop-stat"><div class="stat-val">24h</div><div class="stat-lbl">gasolinera</div></div>
+      </div>
+      <div class="stop-bottom">
+        <div class="rating">★★★★☆ 4.0 <span class="rating-cnt">(top 10 AP-7)</span></div>
+        <span style="color:var(--text-muted);font-size:12px;">Ver más →</span>
+      </div>
+    </div>
+
+    <div class="km-sep">▼ 51 km</div>
+
+    <div class="stop-card" data-tags="ducha comida gasoil 24h" onclick="openModal('s3')">
+      <div class="stop-top">
+        <div class="stop-name">Área La Selva · Repsol Maçanet</div>
+        <div class="stop-km">AP-7 · KM 86</div>
+      </div>
+      <div class="stop-road">AU AP-7 PK 86 · 17412 Maçanet de la Selva, Girona</div>
+      <div class="badges">
+        <div class="badge bg">🚿 Ducha 3€</div>
+        <div class="badge bg">🍽️ Restaurante</div>
+        <div class="badge bb">🕛 24h</div>
+        <div class="badge bg">⛽ Gasóleo</div>
+        <div class="badge bg">🅿️ Parking gratis</div>
+      </div>
+      <div class="sec-bar sec-safe">🔒 Zona sin alertas activas</div>
+      <div class="stop-stats">
+        <div class="stop-stat"><div class="stat-val ok">GRATIS</div><div class="stat-lbl">parking</div></div>
+        <div class="stop-stat"><div class="stat-val">3€</div><div class="stat-lbl">ducha</div></div>
+        <div class="stop-stat"><div class="stat-val">24h</div><div class="stat-lbl">gasolinera</div></div>
+      </div>
+      <div class="stop-bottom">
+        <div class="rating">★★★★☆ 3.9 <span class="rating-cnt">(verificada)</span></div>
+        <span style="color:var(--text-muted);font-size:12px;">Ver más →</span>
+      </div>
+    </div>
+
+    <div class="km-sep">▼ 31 km</div>
+
+    <div class="stop-card" data-tags="ducha comida gasoil 24h seguro" onclick="openModal('s4')">
+      <div class="stop-top">
+        <div class="stop-name">Truck Park Montseny</div>
+        <div class="stop-km">AP-7 · KM 117</div>
+      </div>
+      <div class="stop-road">08450 Llinars del Vallès, Barcelona</div>
+      <div class="badges">
+        <div class="badge bg">🚿 Ducha</div>
+        <div class="badge bg">🍽️ Restaurante</div>
+        <div class="badge bb">🕛 24h</div>
+        <div class="badge bg">⛽ Gasóleo</div>
+        <div class="badge bg">👕 Lavandería</div>
+        <div class="badge bg">🔧 Taller</div>
+        <div class="badge bg">⚡ Tomas eléctricas</div>
+      </div>
+      <div class="sec-bar sec-warn">⚠️ Precaución nocturna · reportados robos en zona AP-7</div>
+      <div class="stop-stats">
+        <div class="stop-stat"><div class="stat-val" style="color:var(--yellow)">💳 PAGO</div><div class="stat-lbl">parking seguro</div></div>
+        <div class="stop-stat"><div class="stat-val">2,80€</div><div class="stat-lbl">precio noche</div></div>
+        <div class="stop-stat"><div class="stat-val">⚡ 🔧</div><div class="stat-lbl">enchufe+taller</div></div>
+      </div>
+      <div class="stop-bottom">
+        <div class="rating">★★★★★ 4.5 <span class="rating-cnt">(muy valorada)</span></div>
+        <span style="color:var(--text-muted);font-size:12px;">Ver más →</span>
+      </div>
+    </div>
+
+    <div class="km-sep">▼ 35 km · Barcelona</div>
+
+    <div class="stop-card" data-tags="ducha seguro" onclick="openModal('s5')">
+      <div class="stop-top">
+        <div class="stop-name">Parking Camiones Zona Franca</div>
+        <div class="stop-km">El Prat · BCN</div>
+      </div>
+      <div class="stop-road">C/ del 110, Polígon Pratenc · El Prat de Llobregat</div>
+      <div class="badges">
+        <div class="badge bg">🚿 Ducha</div>
+        <div class="badge bg">🔒 Vigilado 24h</div>
+        <div class="badge bgray">🍽️ Sin restaurante</div>
+      </div>
+      <div class="sec-bar sec-safe">🔒 Parking vigilado 24h · acceso controlado</div>
+      <div class="stop-stats">
+        <div class="stop-stat"><div class="stat-val" style="color:var(--yellow)">💳 PAGO</div><div class="stat-lbl">parking</div></div>
+        <div class="stop-stat"><div class="stat-val">consultar</div><div class="stat-lbl">precio</div></div>
+        <div class="stop-stat"><div class="stat-val">♿</div><div class="stat-lbl">accesible</div></div>
+      </div>
+      <div class="stop-bottom">
+        <div class="rating">★★★☆☆ 3.5 <span class="rating-cnt">(cerca BCN)</span></div>
+        <span style="color:var(--text-muted);font-size:12px;">Ver más →</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!--             VISTA: PERFIL             -->
+<!-- ═══════════════════════════════════════ -->
+<div class="view" id="view-perfil">
+
+  <div class="perfil-header">
+    <div class="perfil-avatar">🚛</div>
+    <div>
+      <div class="perfil-name">Carlos M.</div>
+      <div class="perfil-sub">Transportista · AP-7 habitual</div>
+      <div class="perfil-badge">✓ Verificado</div>
+    </div>
+  </div>
+
+  <div class="premium-banner" style="margin-top:12px;" onclick="openPaywall()">
+    <div class="premium-icon">⭐</div>
+    <div class="premium-text">
+      <strong>TruckerSpot Pro</strong>
+      <p>Alertas de zonas, precios gasóleo en tiempo real y sin anuncios</p>
+    </div>
+    <button class="premium-btn">3,99€/mes</button>
+  </div>
+
+  <div class="perfil-section">
+    <div class="perfil-section-title">Mi cuenta</div>
+    <div class="perfil-item">
+      <div class="perfil-item-icon">🔖</div>
+      <div class="perfil-item-text">Paradas guardadas</div>
+      <div class="perfil-item-arrow">›</div>
+    </div>
+    <div class="perfil-item">
+      <div class="perfil-item-icon">⚠️</div>
+      <div class="perfil-item-text">Mis alertas activas</div>
+      <div class="perfil-item-badge">2</div>
+    </div>
+    <div class="perfil-item">
+      <div class="perfil-item-icon">📝</div>
+      <div class="perfil-item-text">Mis reportes</div>
+      <div class="perfil-item-arrow">›</div>
+    </div>
+  </div>
+
+  <div class="perfil-section">
+    <div class="perfil-section-title">Ajustes</div>
+    <div class="perfil-item">
+      <div class="perfil-item-icon">🔔</div>
+      <div class="perfil-item-text">Notificaciones</div>
+      <div class="perfil-item-arrow">›</div>
+    </div>
+    <div class="perfil-item">
+      <div class="perfil-item-icon">🚛</div>
+      <div class="perfil-item-text">Mi vehículo</div>
+      <div class="perfil-item-arrow">›</div>
+    </div>
+    <div class="perfil-item">
+      <div class="perfil-item-icon">🌐</div>
+      <div class="perfil-item-text">Idioma</div>
+      <div class="perfil-item-arrow">›</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!--            BOTTOM NAV                 -->
+<!-- ═══════════════════════════════════════ -->
+<div class="bottom-nav">
+  <div class="nav-item active" onclick="switchTab('ruta', this)">
+    <div class="nav-icon">🚛</div>
+    <div class="nav-label">RUTA</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('mapa', this)">
+    <div class="nav-icon">🗺️</div>
+    <div class="nav-label">MAPA</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('parking', this)">
+    <div class="nav-icon">🅿️</div>
+    <div class="nav-label">PARKING</div>
+  </div>
+  <div class="nav-item" onclick="switchTab('perfil', this)">
+    <div class="nav-icon">👤</div>
+    <div class="nav-label">PERFIL</div>
+  </div>
+</div>
+
+<!-- ══════════ MODALES PARADAS ══════════ -->
+<div class="modal-overlay" id="modal-s1" onclick="closeModal(event,'s1')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Andamur La Junquera</div>
+    <div class="modal-sub">AP-7 · KM 7 · C/ Bassegoda 4, 17700 La Junquera, Girona</div>
+    <div class="sec-bar sec-safe">🔒 Parking seguro certificado · valla 3m · vigilancia 24h · cámaras · lector matrículas</div>
+    <div class="modal-slabel">Servicios</div>
+    <div class="detail-row"><div class="detail-icon">🚿</div>Ducha<div class="detail-val ok">SÍ · incluida</div></div>
+    <div class="detail-row"><div class="detail-icon">🍽️</div>Restaurante<div class="detail-val ok">6:00–00:00h · 365 días</div></div>
+    <div class="detail-row"><div class="detail-icon">⛽</div>Gasolinera<div class="detail-val ok">24h</div></div>
+    <div class="detail-row"><div class="detail-icon">🅿️</div>Parking (106 plazas)<div class="detail-val warn">💳 DE PAGO</div></div>
+    <div class="detail-row"><div class="detail-icon">💪</div>Gimnasio<div class="detail-val ok">GRATIS</div></div>
+    <div class="detail-row"><div class="detail-icon">👕</div>Lavandería<div class="detail-val ok">24h · vending</div></div>
+    <div class="detail-row"><div class="detail-icon">📶</div>WiFi<div class="detail-val ok">GRATIS</div></div>
+    <div class="detail-row"><div class="detail-icon">📞</div>Teléfono<div class="detail-val">972 55 44 88</div></div>
+    <div class="modal-slabel">Nota</div>
+    <div class="comment">Considerada el área de servicio de camiones más grande de Europa. A 20 km de la frontera francesa, salida 2 de la AP-7.</div>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=42.3368,2.8886" target="_blank">🧭 Abrir en Google Maps</a>
+    <button class="btn-report">⚠️ Reportar incidencia</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-s2" onclick="closeModal(event,'s2')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Área de Servicio Empordà</div>
+    <div class="modal-sub">AP-7 · KM 35 · 17476 Garrigàs, Girona</div>
+    <div class="sec-bar sec-safe">🔒 Sin alertas de seguridad activas</div>
+    <div class="modal-slabel">Servicios</div>
+    <div class="detail-row"><div class="detail-icon">🚿</div>Ducha<div class="detail-val ok">SÍ</div></div>
+    <div class="detail-row"><div class="detail-icon">🍽️</div>Restaurante<div class="detail-val ok">SÍ · 24h</div></div>
+    <div class="detail-row"><div class="detail-icon">⛽</div>Gasolinera<div class="detail-val ok">24h · ambos sentidos</div></div>
+    <div class="detail-row"><div class="detail-icon">🅿️</div>Parking camiones<div class="detail-val ok">✓ GRATIS</div></div>
+    <div class="detail-row"><div class="detail-icon">📶</div>WiFi<div class="detail-val ok">GRATIS</div></div>
+    <div class="detail-row"><div class="detail-icon">🔌</div>Recarga eléctrica<div class="detail-val ok">SÍ</div></div>
+    <div class="modal-slabel">Nota</div>
+    <div class="comment">Área completa a ambos márgenes de la autopista. Buena parada de paso entre Francia y Barcelona.</div>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=42.1450,2.9540" target="_blank">🧭 Abrir en Google Maps</a>
+    <button class="btn-report">⚠️ Reportar incidencia</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-s3" onclick="closeModal(event,'s3')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Área La Selva · Repsol Maçanet</div>
+    <div class="modal-sub">AP-7 · KM 86 · 17412 Maçanet de la Selva, Girona</div>
+    <div class="sec-bar sec-safe">🔒 Sin alertas activas en esta zona</div>
+    <div class="modal-slabel">Servicios</div>
+    <div class="detail-row"><div class="detail-icon">🚿</div>Ducha<div class="detail-val ok">SÍ · 6:30–23:00h</div></div>
+    <div class="detail-row"><div class="detail-icon">🍽️</div>Restaurante<div class="detail-val ok">6:00–00:00h</div></div>
+    <div class="detail-row"><div class="detail-icon">⛽</div>Gasolinera<div class="detail-val ok">24h</div></div>
+    <div class="detail-row"><div class="detail-icon">🅿️</div>Parking camiones<div class="detail-val ok">✓ GRATIS · ambos sentidos</div></div>
+    <div class="detail-row"><div class="detail-icon">🌿</div>Zona exterior / picnic<div class="detail-val ok">SÍ</div></div>
+    <div class="modal-slabel">Nota</div>
+    <div class="comment">Área amplia con servicios completos a ambos lados. Buena zona verde para estirar las piernas.</div>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=41.8174,2.7441" target="_blank">🧭 Abrir en Google Maps</a>
+    <button class="btn-report">⚠️ Reportar incidencia</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-s4" onclick="closeModal(event,'s4')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Truck Park Montseny</div>
+    <div class="modal-sub">AP-7 · KM 117 · 08450 Llinars del Vallès, Barcelona</div>
+    <div class="sec-bar sec-warn">⚠️ Precaución nocturna · consultar alertas de la zona AP-7</div>
+    <div class="modal-slabel">Servicios</div>
+    <div class="detail-row"><div class="detail-icon">🚿</div>Ducha<div class="detail-val ok">SÍ</div></div>
+    <div class="detail-row"><div class="detail-icon">🍽️</div>Restaurante<div class="detail-val ok">SÍ</div></div>
+    <div class="detail-row"><div class="detail-icon">⛽</div>Gasolinera<div class="detail-val ok">SÍ</div></div>
+    <div class="detail-row"><div class="detail-icon">🅿️</div>Parking (117 plazas)<div class="detail-val warn">💳 PAGO · desde 2,80€/noche</div></div>
+    <div class="detail-row"><div class="detail-icon">🔧</div>Taller mecánico<div class="detail-val ok">SÍ</div></div>
+    <div class="detail-row"><div class="detail-icon">⚡</div>Tomas eléctricas plaza<div class="detail-val ok">SÍ</div></div>
+    <div class="modal-slabel">Nota</div>
+    <div class="comment">Una de las mejor valoradas de toda la AP-7. Especialmente recomendada si necesitas taller o tienes que esperar carga en Barcelona.</div>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=41.6321,2.4756" target="_blank">🧭 Abrir en Google Maps</a>
+    <button class="btn-report">⚠️ Reportar incidencia</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-s5" onclick="closeModal(event,'s5')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Parking Camiones Zona Franca</div>
+    <div class="modal-sub">C/ del 110, Polígon Pratenc · El Prat de Llobregat</div>
+    <div class="sec-bar sec-safe">🔒 Vigilado 24h · acceso controlado · cámaras</div>
+    <div class="modal-slabel">Servicios</div>
+    <div class="detail-row"><div class="detail-icon">🚿</div>Ducha<div class="detail-val ok">SÍ</div></div>
+    <div class="detail-row"><div class="detail-icon">🅿️</div>Parking<div class="detail-val warn">💳 DE PAGO · precio consultar</div></div>
+    <div class="detail-row"><div class="detail-icon">🔒</div>Vigilancia 24h<div class="detail-val ok">SÍ</div></div>
+    <div class="detail-row"><div class="detail-icon">🍽️</div>Restaurante<div class="detail-val no">NO</div></div>
+    <div class="detail-row"><div class="detail-icon">⛽</div>Gasolinera<div class="detail-val no">NO en recinto</div></div>
+    <div class="modal-slabel">Nota</div>
+    <div class="comment">Parking específico para camiones cerca del puerto y Zona Franca de Barcelona. Ideal para esperar descarga en el puerto.</div>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=41.3251,2.1009" target="_blank">🧭 Abrir en Google Maps</a>
+    <button class="btn-report">⚠️ Reportar incidencia</button>
+  </div>
+</div>
+
+<!-- ══════════ PAYWALL MODAL ══════════ -->
+<div class="paywall-modal-overlay" id="paywall-modal" onclick="closePaywallOnBg(event)">
+  <div class="paywall-modal">
+    <div class="pm-handle"></div>
+    <div class="pm-icon">⭐</div>
+    <div class="pm-title">Pásate a Pro</div>
+    <div class="pm-sub">Consulta el estado real de tus rutas con IA, en tiempo real, sin límites.</div>
+    <ul class="pm-features">
+      <li><span class="feat-icon">🚦</span><div><strong>Estado de ruta en tiempo real</strong><br>Incidencias, obras y tráfico con IA · actualizado al minuto</div></li>
+      <li><span class="feat-icon">⛽</span><div><strong>Precio del gasóleo en tu ruta</strong><br>Las estaciones más baratas del trayecto</div></li>
+      <li><span class="feat-icon">⚠️</span><div><strong>Alertas de seguridad</strong><br>Zonas de riesgo, robos reportados, áreas peligrosas</div></li>
+      <li><span class="feat-icon">🔔</span><div><strong>Notificaciones push</strong><br>Te avisamos antes de salir si hay problemas en ruta</div></li>
+      <li><span class="feat-icon">🚫</span><div><strong>Sin publicidad</strong><br>Experiencia limpia, sin interrupciones</div></li>
+    </ul>
+    <div class="pm-price-row">
+      <div class="pm-price">3,99€ <small>/mes</small></div>
+      <div class="pm-period">Cancela cuando quieras · sin permanencia</div>
+    </div>
+    <button class="btn-subscribe" onclick="simulatePurchase()">⭐ Activar Pro ahora</button>
+    <button class="btn-maybe-later" onclick="closePaywall()">Ahora no</button>
+    <div class="pm-guarantee">🔒 Pago seguro · cancelación inmediata desde ajustes</div>
+  </div>
+</div>
+
+<script>
+  // ══════════════════════════════════════════
+  // CONFIG — pon aquí tu Groq API Key
+  // ══════════════════════════════════════════
+  const GROQ_API_KEY = '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';
+
+  // ══════════════════════════════════════════
+  // ESTADO PRO
+  // ══════════════════════════════════════════
+  let isPro = localStorage.getItem('ts_pro') === '1';
+
+  function updateProUI() {
+    const badge = document.getElementById('pro-badge-header');
+    const toggle = document.getElementById('pro-toggle');
+    if (isPro) {
+      badge.classList.add('visible');
+      toggle.classList.add('on');
+    } else {
+      badge.classList.remove('visible');
+      toggle.classList.remove('on');
+    }
+  }
+
+  function togglePro() {
+    isPro = !isPro;
+    localStorage.setItem('ts_pro', isPro ? '1' : '0');
+    updateProUI();
+  }
+
+  window.addEventListener('DOMContentLoaded', updateProUI);
+
+  // ══════════════════════════════════════════
+  // TAB NAV
+  // ══════════════════════════════════════════
+  function switchTab(tab, el) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('view-' + tab).classList.add('active');
+    el.classList.add('active');
+    window.scrollTo(0, 0);
+  }
+
+  // ══════════════════════════════════════════
+  // MODALES PARADAS
+  // ══════════════════════════════════════════
+  function openModal(id) {
+    document.getElementById('modal-' + id).classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal(e, id) {
+    if (e.target === document.getElementById('modal-' + id)) {
+      document.getElementById('modal-' + id).classList.remove('open');
+      document.body.style.overflow = '';
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // PAYWALL MODAL
+  // ══════════════════════════════════════════
+  function openPaywall() {
+    document.getElementById('paywall-modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePaywall() {
+    document.getElementById('paywall-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function closePaywallOnBg(e) {
+    if (e.target === document.getElementById('paywall-modal')) closePaywall();
+  }
+  function simulatePurchase() {
+    // En producción: llamar a tu backend/pasarela de pago aquí
+    isPro = true;
+    localStorage.setItem('ts_pro', '1');
+    updateProUI();
+    closePaywall();
+    // Feedback visual
+    const resultado = document.getElementById('trafico-resultado');
+    const ruta = document.getElementById('ruta-select').value;
+    if (ruta) consultarRuta();
+  }
+
+  // ══════════════════════════════════════════
+  // FILTROS PARKING
+  // ══════════════════════════════════════════
+  function setFilter(btn, tag) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.stop-card').forEach(card => {
+      card.style.display = (tag === 'todos' || card.dataset.tags.includes(tag)) ? '' : 'none';
+    });
+  }
+
+  // ══════════════════════════════════════════
+  // CONSULTA RUTA
+  // ══════════════════════════════════════════
+  async function consultarRuta() {
+    const ruta = document.getElementById('ruta-select').value;
+    if (!ruta) { alert('Elige una ruta primero'); return; }
+
+    const resultado = document.getElementById('trafico-resultado');
+
+    // Usuario FREE → mostrar teaser borroso + paywall
+    if (!isPro) {
+      resultado.innerHTML = buildFreeTeaser(ruta);
+      return;
+    }
+
+    // Usuario PRO → llamar a Groq
+    resultado.innerHTML = `<div class="groq-loading"><div class="spinner"></div>Consultando estado de la ruta con IA...</div>`;
+    document.getElementById('btn-consultar').disabled = true;
+
+    const hoy = new Date().toLocaleDateString('es-ES', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    const prompt = `Eres un asistente experto en tráfico de carreteras españolas para camioneros profesionales.
+Hoy es ${hoy}.
+El camionero va a hacer esta ruta: ${ruta}.
+
+Genera un informe de ruta con este formato JSON exacto (sin markdown, solo JSON puro):
+{
+  "resumen": "Una frase corta del estado general de la ruta",
+  "incidencias": [
+    {
+      "tipo": "verde|amarillo|rojo|azul",
+      "icono": "emoji",
+      "titulo": "Título corto",
+      "descripcion": "Descripción breve para camionero",
+      "km": "Tramo o punto kilométrico"
+    }
+  ],
+  "restricciones": [
+    { "icono": "emoji", "concepto": "texto", "estado": "ok|warn|no", "valor": "texto del valor" }
+  ],
+  "gasoleo_precio": "precio aproximado €/L en esta ruta hoy",
+  "consejo_camionero": "Un consejo práctico específico para este trayecto"
+}
+
+Incluye 3-5 incidencias realistas (mezcla fluido, posibles obras, peajes, etc).
+Incluye restricciones de: vehículos pesados, viento, lluvia, obras programadas, precio gasóleo.
+Sé específico con los km reales de la carretera indicada. Responde SOLO con el JSON.`;
+
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 1200
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error?.message || 'Error en la API');
+      }
+
+      const data = await res.json();
+      let texto = data.choices[0].message.content.trim();
+      texto = texto.replace(/```json|```/g, '').trim();
+      const info = JSON.parse(texto);
+      renderResultado(info, ruta);
+
+    } catch (e) {
+      resultado.innerHTML = `
+        <div class="traffic-card tc-red" style="margin:0 0 10px">
+          <div class="tc-icon">❌</div>
+          <div class="tc-body">
+            <div class="tc-title">Error al consultar</div>
+            <div class="tc-desc">${e.message}</div>
+            <div class="tc-km">Verifica la configuración del servidor</div>
+          </div>
+        </div>`;
+    } finally {
+      document.getElementById('btn-consultar').disabled = false;
+    }
+  }
+
+  // ══════════════════════════════════════════
+  // TEASER PARA FREE (datos de ejemplo borrosos)
+  // ══════════════════════════════════════════
+  function buildFreeTeaser(ruta) {
+    // Datos de ejemplo genéricos (ficticios, solo para el teaser)
+    const ejemploHTML = `
+      <div class="ruta-header" style="margin-bottom:0">
+        <div class="ruta-title">Ruta activa</div>
+        <div class="ruta-route" style="font-size:15px">${ruta}</div>
+        <div style="margin-top:6px;font-size:12px;color:var(--text-dim)">Estado general: circulación fluida con incidencias puntuales</div>
+      </div>
+      <div class="traffic-section">
+        <div class="traffic-title">🚦 Estado del tráfico</div>
+        <div class="traffic-card tc-green">
+          <div class="tc-icon">✅</div>
+          <div class="tc-body">
+            <div class="tc-title">Circulación fluida</div>
+            <div class="tc-desc">Sin retenciones en el tramo inicial. Condiciones normales para vehículos pesados.</div>
+            <div class="tc-km">KM 0–60 · Tramo de inicio</div>
+          </div>
+        </div>
+        <div class="traffic-card tc-yellow">
+          <div class="tc-icon">🚧</div>
+          <div class="tc-body">
+            <div class="tc-title">Obras en calzada</div>
+            <div class="tc-desc">Carril cortado por trabajos de mantenimiento. Reducción de velocidad a 60 km/h.</div>
+            <div class="tc-km">KM 87–94 · Afecta sentido principal</div>
+          </div>
+        </div>
+        <div class="traffic-card tc-red">
+          <div class="tc-icon">⚠️</div>
+          <div class="tc-body">
+            <div class="tc-title">Retención importante</div>
+            <div class="tc-desc">Cola de vehículos pesados en acceso a zona urbana. Demora estimada significativa.</div>
+            <div class="tc-km">KM 122–130 · Acceso urbano</div>
+          </div>
+        </div>
+        <div class="traffic-card tc-blue">
+          <div class="tc-icon">💶</div>
+          <div class="tc-body">
+            <div class="tc-title">Peaje en ruta</div>
+            <div class="tc-desc">Peaje manual y automático disponibles. Acepta tarjeta y efectivo.</div>
+            <div class="tc-km">KM 55 · Cabina de peaje</div>
+          </div>
+        </div>
+      </div>
+      <div class="restricciones-card">
+        <div class="restr-title">📋 Restricciones hoy</div>
+        <div class="restr-row"><div class="restr-icon">🚛</div>Vehículos pesados<div class="restr-ok">Permitido</div></div>
+        <div class="restr-row"><div class="restr-icon">💨</div>Viento lateral<div class="restr-warn">Precaución</div></div>
+        <div class="restr-row"><div class="restr-icon">🌧️</div>Lluvia<div class="restr-ok">Sin previsión</div></div>
+        <div class="restr-row"><div class="restr-icon">🚧</div>Obras programadas<div class="restr-warn">Sí · KM 87–94</div></div>
+        <div class="restr-row"><div class="restr-icon">⛽</div>Gasóleo aprox. en ruta<div class="restr-ok">1,42 €/L</div></div>
+      </div>
+      <div style="margin:0 16px 10px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:12px;padding:12px 14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:5px">💡 Consejo para este trayecto</div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.5">Aprovecha las áreas de servicio en los primeros 60 km para cargar combustible antes de las obras del KM 87.</div>
+      </div>
+    `;
+
+    return `
+      <div class="teaser-wrap" style="position:relative;margin-bottom:16px;">
+        <div class="teaser-blur">
+          ${ejemploHTML}
+        </div>
+        <div class="paywall-overlay">
+          <div class="paywall-card">
+            <div class="paywall-icon">🔒</div>
+            <div class="paywall-title">Informe completo con Pro</div>
+            <div class="paywall-sub">Desbloquea el estado real de tus rutas: tráfico en tiempo real, precios de gasóleo y alertas de seguridad generadas con IA.</div>
+            <ul class="paywall-features">
+              <li>🚦 Incidencias reales al minuto</li>
+              <li>⛽ Precio gasóleo en tu ruta</li>
+              <li>⚠️ Zonas de riesgo y robos</li>
+              <li>🔔 Alertas push antes de salir</li>
+            </ul>
+            <div class="paywall-price">3,99€ <span>/mes</span></div>
+            <button class="btn-pro" onclick="openPaywall()">⭐ Ver informe completo</button>
+            <div class="paywall-note">Sin permanencia · cancela cuando quieras</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ══════════════════════════════════════════
+  // RENDER RESULTADO PRO
+  // ══════════════════════════════════════════
+  function renderResultado(info, ruta) {
+    const colorMap = { verde:'tc-green', amarillo:'tc-yellow', rojo:'tc-red', azul:'tc-blue' };
+    const estadoClass = { ok:'restr-ok', warn:'restr-warn', no:'restr-no' };
+
+    let incidenciasHTML = (info.incidencias || []).map(i => `
+      <div class="traffic-card ${colorMap[i.tipo] || 'tc-blue'}">
+        <div class="tc-icon">${i.icono}</div>
+        <div class="tc-body">
+          <div class="tc-title">${i.titulo}</div>
+          <div class="tc-desc">${i.descripcion}</div>
+          <div class="tc-km">${i.km}</div>
+        </div>
+      </div>`).join('');
+
+    let restriccionesHTML = (info.restricciones || []).map(r => `
+      <div class="restr-row">
+        <div class="restr-icon">${r.icono}</div>${r.concepto}
+        <div class="${estadoClass[r.estado] || 'restr-ok'}">${r.valor}</div>
+      </div>`).join('');
+
+    const now = new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+
+    document.getElementById('trafico-resultado').innerHTML = `
+      <div class="ruta-header" style="margin-bottom:0">
+        <div class="ruta-title">Ruta activa · <span style="color:var(--purple)">⭐ Pro</span></div>
+        <div class="ruta-route" style="font-size:15px">${ruta}</div>
+        <div style="margin-top:6px;font-size:12px;color:var(--text-dim)">${info.resumen}</div>
+      </div>
+      <div class="traffic-section">
+        <div class="traffic-title">🚦 Estado del tráfico</div>
+        ${incidenciasHTML}
+      </div>
+      <div class="restricciones-card">
+        <div class="restr-title">📋 Restricciones hoy</div>
+        ${restriccionesHTML}
+        <div class="restr-row">
+          <div class="restr-icon">⛽</div>Gasóleo aprox. en ruta
+          <div class="restr-ok">${info.gasoleo_precio || '—'}</div>
+        </div>
+      </div>
+      ${info.consejo_camionero ? `
+      <div style="margin:0 16px 10px;background:var(--blue-dim);border:1px solid var(--blue);border-radius:12px;padding:12px 14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:5px">💡 Consejo para este trayecto</div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.5">${info.consejo_camionero}</div>
+      </div>` : ''}
+      <div class="updated-tag">🤖 Generado por Llama 3.3 vía Groq · ${now} · <span style="color:var(--text-muted)">Dato orientativo</span></div>
+    `;
+  }
+</script>
+</body>
+</html>
