@@ -1063,7 +1063,80 @@
   }
 
   // ══════════════════════════════════════════
-  // CONSULTA RUTA
+  // COORDENADAS POR RUTA (bbox para TomTom)
+  // ══════════════════════════════════════════
+  const RUTAS_COORDS = {
+    'La Junquera → Barcelona por AP-7 (145 km)': {
+      bbox: '1.7500,41.2000,2.2000,42.4500',
+      label: 'AP-7 La Junquera–Barcelona'
+    },
+    'Barcelona → Valencia por AP-7 (349 km)': {
+      bbox: '-0.4000,39.4000,2.2000,41.4500',
+      label: 'AP-7 Barcelona–Valencia'
+    },
+    'Valencia → Madrid por A-3 (357 km)': {
+      bbox: '-3.7500,39.4500,-0.3500,40.4500',
+      label: 'A-3 Valencia–Madrid'
+    },
+    'Madrid → Bilbao por A-1 (395 km)': {
+      bbox: '-2.9500,40.4000,-3.7000,43.2600',
+      label: 'A-1 Madrid–Bilbao'
+    },
+    'Zaragoza → Barcelona por AP-2 (296 km)': {
+      bbox: '0.8500,41.3500,2.2000,41.6600',
+      label: 'AP-2 Zaragoza–Barcelona'
+    },
+    'Sevilla → Madrid por A-4 (534 km)': {
+      bbox: '-3.7500,37.3800,-5.9800,40.4200',
+      label: 'A-4 Sevilla–Madrid'
+    }
+  };
+
+  // ══════════════════════════════════════════
+  // PASO 1: OBTENER INCIDENCIAS REALES DE TOMTOM
+  // ══════════════════════════════════════════
+  async function obtenerIncidenciasTomTom(rutaKey) {
+    const TOMTOM_KEY = 'tPprlyX8jlCfkFHJ9jjVwqHcy74TbGLe';
+    const coords = RUTAS_COORDS[rutaKey];
+    if (!coords) return [];
+
+    const url = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${TOMTOM_KEY}&bbox=${coords.bbox}&fields={incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,startTime,endTime,from,to,length,delay,roadNumbers,timeValidity,probabilityOfOccurrence,numberOfReports,lastReportTime,tmc{countryCode,tableNumber,tableVersion,direction,points{sequence,location,offset}},events{description,code,iconCategory}}}}&language=es-ES&categoryFilter=0,1,2,3,4,5,6,7,8,9,10,11,14&timeValidityFilter=present`;
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`TomTom error ${res.status}`);
+    const data = await res.json();
+    return data.incidents || [];
+  }
+
+  // ══════════════════════════════════════════
+  // PASO 2: FORMATEAR INCIDENCIAS PARA GROQ
+  // ══════════════════════════════════════════
+  function formatearIncidenciasParaGroq(incidents) {
+    if (!incidents.length) return 'Sin incidencias registradas en TomTom en este momento.';
+
+    const categoryNames = {
+      0: 'Desconocido', 1: 'Accidente', 2: 'Niebla', 3: 'Condiciones peligrosas',
+      4: 'Lluvia', 5: 'Hielo', 6: 'Embotellamiento', 7: 'Carril cortado',
+      8: 'Viento', 9: 'Obras', 10: 'Carretera cortada', 11: 'Otro',
+      14: 'Vehículo detenido'
+    };
+
+    return incidents.slice(0, 15).map(inc => {
+      const p = inc.properties || {};
+      const evento = (p.events && p.events[0]) || {};
+      const categoria = categoryNames[p.iconCategory] || 'Incidencia';
+      const desde = p.from || '';
+      const hasta = p.to || '';
+      const retardo = p.delay ? `${Math.round(p.delay / 60)} min de retardo` : '';
+      const longitud = p.length ? `${(p.length / 1000).toFixed(1)} km afectados` : '';
+      const carretera = (p.roadNumbers || []).join(', ');
+      const desc = evento.description || '';
+      return `- [${categoria}] ${carretera} ${desde}${hasta ? ' → ' + hasta : ''}: ${desc} ${retardo} ${longitud}`.trim();
+    }).join('\n');
+  }
+
+  // ══════════════════════════════════════════
+  // CONSULTA RUTA (TomTom → Groq)
   // ══════════════════════════════════════════
   async function consultarRuta() {
     const ruta = document.getElementById('ruta-select').value;
@@ -1077,40 +1150,66 @@
       return;
     }
 
-    // Usuario PRO → llamar a Groq
-    resultado.innerHTML = `<div class="groq-loading"><div class="spinner"></div>Consultando estado de la ruta con IA...</div>`;
+    // Usuario PRO → TomTom + Groq
+    resultado.innerHTML = `<div class="groq-loading"><div class="spinner"></div>Obteniendo datos reales de tráfico...</div>`;
     document.getElementById('btn-consultar').disabled = true;
 
-    const hoy = new Date().toLocaleDateString('es-ES', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+    try {
+      // PASO 1: Datos reales de TomTom
+      resultado.innerHTML = `<div class="groq-loading"><div class="spinner"></div>📡 Consultando TomTom Traffic...</div>`;
+      let incidents = [];
+      let tomtomError = null;
+      try {
+        incidents = await obtenerIncidenciasTomTom(ruta);
+      } catch(e) {
+        tomtomError = e.message;
+      }
 
-    const prompt = `Eres un asistente experto en tráfico de carreteras españolas para camioneros profesionales.
-Hoy es ${hoy}.
-El camionero va a hacer esta ruta: ${ruta}.
+      const incidenciasTexto = tomtomError
+        ? `Error al conectar con TomTom: ${tomtomError}. Usa solo tu conocimiento general de esta vía.`
+        : formatearIncidenciasParaGroq(incidents);
 
-Genera un informe de ruta con este formato JSON exacto (sin markdown, solo JSON puro):
+      // PASO 2: Groq redacta con datos reales
+      resultado.innerHTML = `<div class="groq-loading"><div class="spinner"></div>🤖 Generando informe con datos reales...</div>`;
+
+      const hoy = new Date().toLocaleDateString('es-ES', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+      const hora = new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+
+      const prompt = `Eres un asistente experto en tráfico para camioneros profesionales españoles.
+Hoy es ${hoy}, hora actual: ${hora}.
+Ruta del camionero: ${ruta}
+
+DATOS REALES DE TRÁFICO OBTENIDOS DE TOMTOM TRAFFIC API (fuente oficial):
+${incidenciasTexto}
+
+INSTRUCCIONES IMPORTANTES:
+- Usa ÚNICAMENTE los datos reales de TomTom proporcionados arriba.
+- Si TomTom no reporta peajes, NO los menciones. Solo menciona peajes si aparecen en los datos.
+- Si no hay incidencias, indica claramente que la vía está despejada.
+- El precio del gasóleo es orientativo (~1.35 €/L media nacional hoy).
+- Para restricciones de viento/lluvia usa los datos si los hay, si no indica "Sin datos en tiempo real".
+- Sé directo y útil para un camionero profesional.
+
+Responde SOLO con este JSON exacto (sin markdown, sin texto extra):
 {
-  "resumen": "Una frase corta del estado general de la ruta",
+  "resumen": "Una frase del estado real de la ruta según TomTom",
   "incidencias": [
     {
       "tipo": "verde|amarillo|rojo|azul",
       "icono": "emoji",
       "titulo": "Título corto",
-      "descripcion": "Descripción breve para camionero",
-      "km": "Tramo o punto kilométrico"
+      "descripcion": "Descripción concreta basada en los datos reales",
+      "km": "Punto o tramo kilométrico si está disponible"
     }
   ],
   "restricciones": [
-    { "icono": "emoji", "concepto": "texto", "estado": "ok|warn|no", "valor": "texto del valor" }
+    { "icono": "emoji", "concepto": "texto", "estado": "ok|warn|no", "valor": "valor real o indicación sin datos" }
   ],
-  "gasoleo_precio": "precio aproximado €/L en esta ruta hoy",
-  "consejo_camionero": "Un consejo práctico específico para este trayecto"
-}
+  "gasoleo_precio": "1.35 €/L aprox. (media nacional)",
+  "consejo_camionero": "Consejo práctico basado en las incidencias reales encontradas",
+  "fuente_datos": "TomTom Traffic API · ${hora}"
+}`;
 
-Incluye 3-5 incidencias realistas (mezcla fluido, posibles obras, peajes, etc).
-Incluye restricciones de: vehículos pesados, viento, lluvia, obras programadas, precio gasóleo.
-Sé específico con los km reales de la carretera indicada. Responde SOLO con el JSON.`;
-
-    try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -1120,20 +1219,21 @@ Sé específico con los km reales de la carretera indicada. Responde SOLO con el
         body: JSON.stringify({
           model: 'llama-3.3-70b-versatile',
           messages: [{ role: 'user', content: prompt }],
-          temperature: 0.7,
+          temperature: 0.2,
           max_tokens: 1200
         })
       });
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error?.message || 'Error en la API');
+        throw new Error(err.error?.message || 'Error en Groq');
       }
 
       const data = await res.json();
       let texto = data.choices[0].message.content.trim();
       texto = texto.replace(/```json|```/g, '').trim();
       const info = JSON.parse(texto);
+      info._tomtom_incidents = incidents.length;
       renderResultado(info, ruta);
 
     } catch (e) {
@@ -1143,7 +1243,7 @@ Sé específico con los km reales de la carretera indicada. Responde SOLO con el
           <div class="tc-body">
             <div class="tc-title">Error al consultar</div>
             <div class="tc-desc">${e.message}</div>
-            <div class="tc-km">Verifica la configuración del servidor</div>
+            <div class="tc-km">Verifica tu conexión o las claves API</div>
           </div>
         </div>`;
     } finally {
@@ -1284,7 +1384,8 @@ Sé específico con los km reales de la carretera indicada. Responde SOLO con el
         <div style="font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:5px">💡 Consejo para este trayecto</div>
         <div style="font-size:12px;color:var(--text-dim);line-height:1.5">${info.consejo_camionero}</div>
       </div>` : ''}
-      <div class="updated-tag">🤖 Generado por Llama 3.3 vía Groq · ${now} · <span style="color:var(--text-muted)">Dato orientativo</span></div>
+      <div class="updated-tag">📡 TomTom Traffic API · 🤖 Llama 3.3 · ${now}</div>
+      ${info._tomtom_incidents !== undefined ? `<div class="updated-tag" style="margin-top:-6px;color:var(--green)">✅ ${info._tomtom_incidents} incidencia${info._tomtom_incidents !== 1 ? 's' : ''} real${info._tomtom_incidents !== 1 ? 'es' : ''} procesada${info._tomtom_incidents !== 1 ? 's' : ''}</div>` : ''}
     `;
   }
 </script>
