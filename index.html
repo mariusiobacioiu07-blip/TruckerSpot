@@ -1100,10 +1100,16 @@
     const coords = RUTAS_COORDS[rutaKey];
     if (!coords) return [];
 
-    const url = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${TOMTOM_KEY}&bbox=${coords.bbox}&fields={incidents{type,geometry{type,coordinates},properties{id,iconCategory,magnitudeOfDelay,startTime,endTime,from,to,length,delay,roadNumbers,timeValidity,probabilityOfOccurrence,numberOfReports,lastReportTime,tmc{countryCode,tableNumber,tableVersion,direction,points{sequence,location,offset}},events{description,code,iconCategory}}}}&language=es-ES&categoryFilter=0,1,2,3,4,5,6,7,8,9,10,11,14&timeValidityFilter=present`;
+    // Usamos Traffic Flow + Incidents v5 con fields codificado correctamente
+    const bbox = coords.bbox;
+    const fields = encodeURIComponent('{incidents{type,properties{iconCategory,magnitudeOfDelay,from,to,length,delay,roadNumbers,events{description,code,iconCategory}}}}');
+    const url = `https://api.tomtom.com/traffic/services/5/incidentDetails?key=${TOMTOM_KEY}&bbox=${bbox}&fields=${fields}&language=es-ES&timeValidityFilter=present`;
 
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`TomTom error ${res.status}`);
+    const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`TomTom ${res.status}: ${errText.slice(0, 150)}`);
+    }
     const data = await res.json();
     return data.incidents || [];
   }
@@ -1112,7 +1118,7 @@
   // PASO 2: FORMATEAR INCIDENCIAS PARA GROQ
   // ══════════════════════════════════════════
   function formatearIncidenciasParaGroq(incidents) {
-    if (!incidents.length) return 'Sin incidencias registradas en TomTom en este momento.';
+    if (!incidents.length) return 'TomTom no reporta incidencias activas en esta ruta ahora mismo. Vía aparentemente despejada.';
 
     const categoryNames = {
       0: 'Desconocido', 1: 'Accidente', 2: 'Niebla', 3: 'Condiciones peligrosas',
@@ -1187,7 +1193,8 @@ INSTRUCCIONES IMPORTANTES:
 - Si TomTom no reporta peajes, NO los menciones. Solo menciona peajes si aparecen en los datos.
 - Si no hay incidencias, indica claramente que la vía está despejada.
 - El precio del gasóleo es orientativo (~1.35 €/L media nacional hoy).
-- Para restricciones de viento/lluvia usa los datos si los hay, si no indica "Sin datos en tiempo real".
+- Para restricciones de viento/lluvia: si TomTom no reporta nada, indica "Sin alertas activas" en estado ok (verde), NO pongas "Sin datos en tiempo real".
+- Si hay 0 incidencias, pon UNA sola incidencia tipo verde: "Vía despejada" indicando que TomTom no reporta nada activo.
 - Sé directo y útil para un camionero profesional.
 
 Responde SOLO con este JSON exacto (sin markdown, sin texto extra):
