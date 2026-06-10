@@ -530,7 +530,8 @@
     color: var(--text-muted); font-size: 13px; padding: 8px; cursor: pointer;
   }
   .pm-guarantee { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 10px; }
-  <!-- MapLibre GL JS (alternativa oficial a TomTom SDK deprecado) -->
+  </style>
+  <!-- MapLibre GL JS -->
   <link href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css' rel='stylesheet' />
   <script src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'></script>
   <script>
@@ -563,29 +564,21 @@
     try {
       mlMap = new maplibregl.Map({
         container: 'tomtom-map',
-        style: `https://api.tomtom.com/style/2/custom/style/dEZG34YCpaCCMdMB3zCuX.json?key=${TOMTOM_KEY}`,
+        style: {
+          version: 8,
+          sources: {
+            'osm': {
+              type: 'raster',
+              tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution: '© OpenStreetMap contributors'
+            }
+          },
+          layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
+        },
         center: [2.15, 41.85],
         zoom: 8,
         attributionControl: false
-      });
-
-      // Fallback: si el estilo custom falla, usar OpenStreetMap con tema oscuro
-      mlMap.on('error', (e) => {
-        if (!mlMap._fallback) {
-          mlMap._fallback = true;
-          mlMap.setStyle({
-            version: 8,
-            sources: {
-              'osm': {
-                type: 'raster',
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                tileSize: 256,
-                attribution: '© OpenStreetMap'
-              }
-            },
-            layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
-          });
-        }
       });
 
       mlMap.on('load', () => {
@@ -650,7 +643,6 @@
   });
 
 </script>
-</style>
 </head>
 <body>
 
