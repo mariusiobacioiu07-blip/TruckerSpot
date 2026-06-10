@@ -532,7 +532,8 @@
   .pm-guarantee { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 10px; }
   <!-- TomTom Maps SDK -->
   <link rel='stylesheet' type='text/css' href='https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css'/>
-  <script src='https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js'>
+  <script src='https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js'></script>
+  <script>
   // ══════════════════════════════════════════
   // MAPA TOMTOM REAL
   // ══════════════════════════════════════════
@@ -553,6 +554,13 @@
     const loading = document.getElementById('tomtom-map-loading');
     const mapDiv = document.getElementById('tomtom-map');
 
+    // Timeout: si en 12s no carga, mostrar error
+    const mapaTimeout = setTimeout(() => {
+      if (loading.style.display !== 'none') {
+        loading.innerHTML = '<span style="font-size:24px">❌</span><span style="color:#ff5252">Error al cargar el mapa TomTom.<br>Comprueba la conexión.</span>';
+      }
+    }, 12000);
+
     try {
       ttMap = tt.map({
         key: TOMTOM_KEY,
@@ -564,18 +572,19 @@
       });
 
       ttMap.on('load', () => {
+        clearTimeout(mapaTimeout);
         loading.style.display = 'none';
         mapDiv.style.display = 'block';
 
-        // Capa de tráfico en tiempo real
+        // Capa de tráfico en tiempo real (refresca cada 60s)
         ttMap.addTier(tt.trafficIncidents({
           key: TOMTOM_KEY,
-          refresh: 30 // refresca cada 30 segundos
+          refresh: 60
         }));
 
         ttMap.addTier(tt.trafficFlow({
           key: TOMTOM_KEY,
-          refresh: 30
+          refresh: 60
         }));
 
         // Añadir marcadores de paradas
