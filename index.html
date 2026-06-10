@@ -264,6 +264,19 @@
   .toggle-switch.on .toggle-knob { left: 20px; }
 
   /* ═══════════════ VISTA MAPA ═══════════════ */
+  #tomtom-map {
+    margin: 12px 16px 0;
+    border-radius: 16px;
+    height: 420px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .map-loading {
+    height: 420px; margin: 12px 16px 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: var(--card); border-radius: 16px; border: 1px solid var(--border);
+    gap: 10px; color: var(--text-muted); font-size: 13px;
+  }
   .map-view-area {
     margin: 12px 16px 0;
     background: var(--card); border: 1px solid var(--border);
@@ -517,6 +530,100 @@
     color: var(--text-muted); font-size: 13px; padding: 8px; cursor: pointer;
   }
   .pm-guarantee { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 10px; }
+  <!-- TomTom Maps SDK -->
+  <link rel='stylesheet' type='text/css' href='https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css'/>
+  <script src='https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js'>
+  // ══════════════════════════════════════════
+  // MAPA TOMTOM REAL
+  // ══════════════════════════════════════════
+  const TOMTOM_KEY = 'tPprlyX8jlCfkFHJ9jjVwqHcy74TbGLe';
+  let ttMap = null;
+
+  const PARADAS_MAPA = [
+    { id: 's1', nombre: 'Andamur La Junquera', lat: 42.4030, lng: 2.8784, tipo: '⛽🅿️', color: '#00e676' },
+    { id: 's2', nombre: 'Área Servicio Empordà', lat: 42.1730, lng: 2.9315, tipo: '🍽️⛽', color: '#00e676' },
+    { id: 's3', nombre: 'Repsol Maçanet AP-7', lat: 41.7723, lng: 2.7399, tipo: '⛽🚿', color: '#00e676' },
+    { id: 's4', nombre: 'mowizTruck Montseny', lat: 41.6486, lng: 2.4264, tipo: '🅿️🔒', color: '#FFD600' },
+    { id: 's5', nombre: 'Parking BCN L'Hospitalet', lat: 41.3432, lng: 2.1100, tipo: '🅿️🔒', color: '#00e676' },
+  ];
+
+  function initTomTomMap() {
+    if (ttMap) return; // ya inicializado
+
+    const loading = document.getElementById('tomtom-map-loading');
+    const mapDiv = document.getElementById('tomtom-map');
+
+    try {
+      ttMap = tt.map({
+        key: TOMTOM_KEY,
+        container: 'tomtom-map',
+        center: [2.5, 41.8], // centro de Cataluña
+        zoom: 8,
+        style: 'tomtom://vector/1/basic-night', // estilo oscuro = combina con la app
+        language: 'es-ES'
+      });
+
+      ttMap.on('load', () => {
+        loading.style.display = 'none';
+        mapDiv.style.display = 'block';
+
+        // Capa de tráfico en tiempo real
+        ttMap.addTier(tt.trafficIncidents({
+          key: TOMTOM_KEY,
+          refresh: 30 // refresca cada 30 segundos
+        }));
+
+        ttMap.addTier(tt.trafficFlow({
+          key: TOMTOM_KEY,
+          refresh: 30
+        }));
+
+        // Añadir marcadores de paradas
+        PARADAS_MAPA.forEach(parada => {
+          const el = document.createElement('div');
+          el.style.cssText = `
+            width:36px; height:36px; border-radius:50% 50% 50% 0;
+            background:${parada.color}; border:2px solid #fff;
+            transform:rotate(-45deg); cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+          `;
+          const inner = document.createElement('div');
+          inner.style.cssText = 'transform:rotate(45deg); font-size:14px; line-height:1;';
+          inner.textContent = '🅿️';
+          el.appendChild(inner);
+
+          const popup = new tt.Popup({ offset: 30, closeButton: true })
+            .setHTML(`<div style="font-size:13px;font-weight:700;color:#111">${parada.nombre}</div><div style="font-size:11px;color:#555;margin-top:2px">${parada.tipo}</div>`);
+
+          new tt.Marker({ element: el, anchor: 'bottom-left' })
+            .setLngLat([parada.lng, parada.lat])
+            .setPopup(popup)
+            .addTo(ttMap);
+        });
+
+        // Forzar redibujado tras mostrar
+        setTimeout(() => ttMap.resize(), 100);
+      });
+
+      ttMap.on('error', () => {
+        loading.innerHTML = '<span style="color:#ff5252">❌ Error al cargar el mapa</span>';
+      });
+
+    } catch(e) {
+      loading.innerHTML = `<span style="color:#ff5252">❌ ${e.message}</span>`;
+    }
+  }
+
+  // Botones de filtro del mapa
+  document.querySelectorAll('.mf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mf-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+</script>
 </style>
 </head>
 <body>
@@ -577,21 +684,11 @@
     <button class="mf-btn">🔒 Seguro</button>
   </div>
 
-  <div class="map-view-area">
-    <div class="map-bg"></div>
-    <div class="map-route-line"></div>
-    <div class="mpin mg mp1"><div class="mpin-inner"></div></div>
-    <div class="mpin mg mp2"><div class="mpin-inner"></div></div>
-    <div class="mpin my mp3"><div class="mpin-inner"></div></div>
-    <div class="mpin mg mp4"><div class="mpin-inner"></div></div>
-    <div class="mpin mg mp5"><div class="mpin-inner"></div></div>
-    <div class="map-badge-tl">📍 5 paradas en ruta</div>
-    <div class="map-coming">
-      <span style="font-size:28px">🗺️</span>
-      <span style="font-size:13px">Mapa interactivo</span>
-      <span style="font-size:11px;color:var(--text-muted)">Próximamente</span>
-    </div>
+  <div id="tomtom-map-loading" class="map-loading">
+    <div class="spinner"></div>
+    <span>Cargando mapa...</span>
   </div>
+  <div id="tomtom-map" style="display:none"></div>
 
   <div class="map-legend" style="margin-top:10px;">
     <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Sin alertas</div>
@@ -739,7 +836,7 @@
         <div class="stop-name">Parking Camiones Zona Franca</div>
         <div class="stop-km">El Prat · BCN</div>
       </div>
-      <div class="stop-road">C/ del 110, Polígon Pratenc · El Prat de Llobregat</div>
+      <div class="stop-road">Camí Pau Redó 10 · 08908 L'Hospitalet de Llobregat</div>
       <div class="badges">
         <div class="badge bg">🚿 Ducha</div>
         <div class="badge bg">🔒 Vigilado 24h</div>
@@ -862,7 +959,7 @@
     <div class="detail-row"><div class="detail-icon">📞</div>Teléfono<div class="detail-val">972 55 44 88</div></div>
     <div class="modal-slabel">Nota</div>
     <div class="comment">Considerada el área de servicio de camiones más grande de Europa. A 20 km de la frontera francesa, salida 2 de la AP-7.</div>
-    <a class="btn-nav-link" href="https://maps.google.com/?q=42.3368,2.8886" target="_blank">🧭 Abrir en Google Maps</a>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=42.4030,2.8784" target="_blank">🧭 Abrir en Google Maps</a>
     <button class="btn-report">⚠️ Reportar incidencia</button>
   </div>
 </div>
@@ -882,7 +979,7 @@
     <div class="detail-row"><div class="detail-icon">🔌</div>Recarga eléctrica<div class="detail-val ok">SÍ</div></div>
     <div class="modal-slabel">Nota</div>
     <div class="comment">Área completa a ambos márgenes de la autopista. Buena parada de paso entre Francia y Barcelona.</div>
-    <a class="btn-nav-link" href="https://maps.google.com/?q=42.1450,2.9540" target="_blank">🧭 Abrir en Google Maps</a>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=42.1730,2.9315" target="_blank">🧭 Abrir en Google Maps</a>
     <button class="btn-report">⚠️ Reportar incidencia</button>
   </div>
 </div>
@@ -901,7 +998,7 @@
     <div class="detail-row"><div class="detail-icon">🌿</div>Zona exterior / picnic<div class="detail-val ok">SÍ</div></div>
     <div class="modal-slabel">Nota</div>
     <div class="comment">Área amplia con servicios completos a ambos lados. Buena zona verde para estirar las piernas.</div>
-    <a class="btn-nav-link" href="https://maps.google.com/?q=41.8174,2.7441" target="_blank">🧭 Abrir en Google Maps</a>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=41.7723,2.7399" target="_blank">🧭 Abrir en Google Maps</a>
     <button class="btn-report">⚠️ Reportar incidencia</button>
   </div>
 </div>
@@ -921,7 +1018,7 @@
     <div class="detail-row"><div class="detail-icon">⚡</div>Tomas eléctricas plaza<div class="detail-val ok">SÍ</div></div>
     <div class="modal-slabel">Nota</div>
     <div class="comment">Una de las mejor valoradas de toda la AP-7. Especialmente recomendada si necesitas taller o tienes que esperar carga en Barcelona.</div>
-    <a class="btn-nav-link" href="https://maps.google.com/?q=41.6321,2.4756" target="_blank">🧭 Abrir en Google Maps</a>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=41.6486,2.4264" target="_blank">🧭 Abrir en Google Maps</a>
     <button class="btn-report">⚠️ Reportar incidencia</button>
   </div>
 </div>
@@ -930,7 +1027,7 @@
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="modal-title">Parking Camiones Zona Franca</div>
-    <div class="modal-sub">C/ del 110, Polígon Pratenc · El Prat de Llobregat</div>
+    <div class="modal-sub">Camí Pau Redó 10 · 08908 L'Hospitalet de Llobregat</div>
     <div class="sec-bar sec-safe">🔒 Vigilado 24h · acceso controlado · cámaras</div>
     <div class="modal-slabel">Servicios</div>
     <div class="detail-row"><div class="detail-icon">🚿</div>Ducha<div class="detail-val ok">SÍ</div></div>
@@ -940,7 +1037,7 @@
     <div class="detail-row"><div class="detail-icon">⛽</div>Gasolinera<div class="detail-val no">NO en recinto</div></div>
     <div class="modal-slabel">Nota</div>
     <div class="comment">Parking específico para camiones cerca del puerto y Zona Franca de Barcelona. Ideal para esperar descarga en el puerto.</div>
-    <a class="btn-nav-link" href="https://maps.google.com/?q=41.3251,2.1009" target="_blank">🧭 Abrir en Google Maps</a>
+    <a class="btn-nav-link" href="https://maps.google.com/?q=41.3432,2.1100" target="_blank">🧭 Abrir en Google Maps</a>
     <button class="btn-report">⚠️ Reportar incidencia</button>
   </div>
 </div>
@@ -1009,6 +1106,7 @@
     document.getElementById('view-' + tab).classList.add('active');
     el.classList.add('active');
     window.scrollTo(0, 0);
+    if (tab === 'mapa') initTomTomMap();
   }
 
   // ══════════════════════════════════════════
