@@ -530,97 +530,114 @@
     color: var(--text-muted); font-size: 13px; padding: 8px; cursor: pointer;
   }
   .pm-guarantee { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 10px; }
-  <!-- TomTom Maps SDK -->
-  <link rel='stylesheet' type='text/css' href='https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps.css'/>
-  <script src='https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.25.0/maps/maps-web.min.js'></script>
+  <!-- MapLibre GL JS (alternativa oficial a TomTom SDK deprecado) -->
+  <link href='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css' rel='stylesheet' />
+  <script src='https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js'></script>
   <script>
   // ══════════════════════════════════════════
-  // MAPA TOMTOM REAL
+  // MAPA MAPLIBRE + TILES TOMTOM
   // ══════════════════════════════════════════
   const TOMTOM_KEY = 'tPprlyX8jlCfkFHJ9jjVwqHcy74TbGLe';
-  let ttMap = null;
+  let mlMap = null;
 
   const PARADAS_MAPA = [
-    { id: 's1', nombre: 'Andamur La Junquera', lat: 42.4030, lng: 2.8784, tipo: '⛽🅿️', color: '#00e676' },
-    { id: 's2', nombre: 'Área Servicio Empordà', lat: 42.1730, lng: 2.9315, tipo: '🍽️⛽', color: '#00e676' },
-    { id: 's3', nombre: 'Repsol Maçanet AP-7', lat: 41.7723, lng: 2.7399, tipo: '⛽🚿', color: '#00e676' },
-    { id: 's4', nombre: 'mowizTruck Montseny', lat: 41.6486, lng: 2.4264, tipo: '🅿️🔒', color: '#FFD600' },
-    { id: 's5', nombre: 'Parking BCN L'Hospitalet', lat: 41.3432, lng: 2.1100, tipo: '🅿️🔒', color: '#00e676' },
+    { id: 's1', nombre: 'Andamur La Junquera', lat: 42.4030, lng: 2.8784, emoji: '⛽', tags: 'Gasoil · Parking · 24h' },
+    { id: 's2', nombre: 'Área Servicio Empordà', lat: 42.1730, lng: 2.9315, emoji: '🍽️', tags: 'Comida · Gasoil · 24h' },
+    { id: 's3', nombre: 'Repsol Maçanet AP-7', lat: 41.7723, lng: 2.7399, emoji: '⛽', tags: 'Gasoil · Ducha · 24h' },
+    { id: 's4', nombre: 'mowizTruck Montseny', lat: 41.6486, lng: 2.4264, emoji: '🅿️', tags: 'Parking seguro · Ducha' },
+    { id: 's5', nombre: 'Parking BCN L'Hospitalet', lat: 41.3432, lng: 2.1100, emoji: '🅿️', tags: 'Parking seguro · 24h' },
   ];
 
   function initTomTomMap() {
-    if (ttMap) return; // ya inicializado
+    if (mlMap) return;
 
     const loading = document.getElementById('tomtom-map-loading');
-    const mapDiv = document.getElementById('tomtom-map');
+    const mapDiv  = document.getElementById('tomtom-map');
 
-    // Timeout: si en 12s no carga, mostrar error
     const mapaTimeout = setTimeout(() => {
       if (loading.style.display !== 'none') {
-        loading.innerHTML = '<span style="font-size:24px">❌</span><span style="color:#ff5252">Error al cargar el mapa TomTom.<br>Comprueba la conexión.</span>';
+        loading.innerHTML = '<span style="font-size:24px">❌</span><span style="color:#ff5252;text-align:center">Error al cargar el mapa.<br>Comprueba la conexión.</span>';
       }
-    }, 12000);
+    }, 15000);
 
     try {
-      ttMap = tt.map({
-        key: TOMTOM_KEY,
+      mlMap = new maplibregl.Map({
         container: 'tomtom-map',
-        center: [2.5, 41.8], // centro de Cataluña
+        style: `https://api.tomtom.com/style/2/custom/style/dEZG34YCpaCCMdMB3zCuX.json?key=${TOMTOM_KEY}`,
+        center: [2.15, 41.85],
         zoom: 8,
-        style: 'tomtom://vector/1/basic-night', // estilo oscuro = combina con la app
-        language: 'es-ES'
+        attributionControl: false
       });
 
-      ttMap.on('load', () => {
+      // Fallback: si el estilo custom falla, usar OpenStreetMap con tema oscuro
+      mlMap.on('error', (e) => {
+        if (!mlMap._fallback) {
+          mlMap._fallback = true;
+          mlMap.setStyle({
+            version: 8,
+            sources: {
+              'osm': {
+                type: 'raster',
+                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+                tileSize: 256,
+                attribution: '© OpenStreetMap'
+              }
+            },
+            layers: [{ id: 'osm-tiles', type: 'raster', source: 'osm' }]
+          });
+        }
+      });
+
+      mlMap.on('load', () => {
         clearTimeout(mapaTimeout);
         loading.style.display = 'none';
         mapDiv.style.display = 'block';
 
-        // Capa de tráfico en tiempo real (refresca cada 60s)
-        ttMap.addTier(tt.trafficIncidents({
-          key: TOMTOM_KEY,
-          refresh: 60
-        }));
+        // Añadir capa de tráfico TomTom (tiles raster)
+        mlMap.addSource('tomtom-traffic', {
+          type: 'raster',
+          tiles: [`https://api.tomtom.com/traffic/map/4/tile/flow/relative/{z}/{x}/{y}.png?key=${TOMTOM_KEY}&tileSize=256`],
+          tileSize: 256
+        });
+        mlMap.addLayer({ id: 'tomtom-traffic-layer', type: 'raster', source: 'tomtom-traffic', paint: { 'raster-opacity': 0.7 } });
 
-        ttMap.addTier(tt.trafficFlow({
-          key: TOMTOM_KEY,
-          refresh: 60
-        }));
-
-        // Añadir marcadores de paradas
+        // Marcadores de paradas
         PARADAS_MAPA.forEach(parada => {
           const el = document.createElement('div');
+          el.innerHTML = parada.emoji;
           el.style.cssText = `
-            width:36px; height:36px; border-radius:50% 50% 50% 0;
-            background:${parada.color}; border:2px solid #fff;
-            transform:rotate(-45deg); cursor:pointer;
+            width:38px; height:38px; border-radius:50%;
+            background:#1a1a2e; border:2px solid #00e676;
             display:flex; align-items:center; justify-content:center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+            font-size:18px; cursor:pointer;
+            box-shadow:0 2px 8px rgba(0,230,118,0.4);
           `;
-          const inner = document.createElement('div');
-          inner.style.cssText = 'transform:rotate(45deg); font-size:14px; line-height:1;';
-          inner.textContent = '🅿️';
-          el.appendChild(inner);
 
-          const popup = new tt.Popup({ offset: 30, closeButton: true })
-            .setHTML(`<div style="font-size:13px;font-weight:700;color:#111">${parada.nombre}</div><div style="font-size:11px;color:#555;margin-top:2px">${parada.tipo}</div>`);
+          const popup = new maplibregl.Popup({ offset: 22, closeButton: true, maxWidth: '220px' })
+            .setHTML(\`<div style="font-size:13px;font-weight:700;color:#111;margin-bottom:3px">\${parada.nombre}</div><div style="font-size:11px;color:#555">\${parada.tags}</div>\`);
 
-          new tt.Marker({ element: el, anchor: 'bottom-left' })
+          new maplibregl.Marker({ element: el })
             .setLngLat([parada.lng, parada.lat])
             .setPopup(popup)
-            .addTo(ttMap);
+            .addTo(mlMap);
         });
 
-        // Forzar redibujado tras mostrar
-        setTimeout(() => ttMap.resize(), 100);
-      });
+        setTimeout(() => mlMap.resize(), 150);
 
-      ttMap.on('error', () => {
-        loading.innerHTML = '<span style="color:#ff5252">❌ Error al cargar el mapa</span>';
+        // Refresco del tráfico cada 60s
+        setInterval(() => {
+          if (mlMap.getSource('tomtom-traffic')) {
+            const src = mlMap.getSource('tomtom-traffic');
+            src.tiles = [`https://api.tomtom.com/traffic/map/4/tile/flow/relative/{z}/{x}/{y}.png?key=${TOMTOM_KEY}&tileSize=256&t=\${Date.now()}`];
+            mlMap.style.sourceCaches['tomtom-traffic'].clearTiles();
+            mlMap.style.sourceCaches['tomtom-traffic'].update(mlMap.transform);
+          }
+        }, 60000);
       });
 
     } catch(e) {
-      loading.innerHTML = `<span style="color:#ff5252">❌ ${e.message}</span>`;
+      clearTimeout(mapaTimeout);
+      loading.innerHTML = \`<span style="color:#ff5252">❌ \${e.message}</span>\`;
     }
   }
 
